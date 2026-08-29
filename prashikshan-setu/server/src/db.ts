@@ -177,7 +177,7 @@ async function seed() {
   for (const c of courses) {
     await pool.query(
       `INSERT INTO igot_courses (code, title, domain, level, hours, url) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [...c, `https://igotkarmayogi.gov.in
+      [...c, "https://igotkarmayogi.gov.in"],
     );
   }
 
