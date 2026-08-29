@@ -31,7 +31,8 @@ export async function generateMcqsFromText(
 Generate exactly ${count} multiple-choice questions from the learning material.
 Return ONLY valid JSON array, no markdown fences. Each item:
 {"question":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correct":"A|B|C|D","explanation":"..."}
-Rules: one correct answer; options plausible; explanations short; language clear for government trainees.`;
+Rules: one correct answer; options plausible; explanations short; language clear for government trainees.
+Vary question angles each run; do not reuse the same stems. Mix conceptual and applied items. Variation: ${Date.now() % 997}.`;
 
   try {
     const res = await fetch(OPENROUTER_URL, {
@@ -48,7 +49,7 @@ Rules: one correct answer; options plausible; explanations short; language clear
           { role: "system", content: system },
           { role: "user", content: `Learning material:\n\n${clipped}` },
         ],
-        temperature: 0.4,
+        temperature: 0.7,
       }),
     });
 
@@ -116,13 +117,15 @@ export async function chatTutor(
         temperature: 0.5,
       }),
     });
-    if (!res.ok) return "Coach is briefly unavailable. Review your open gaps and recommended courses.";
+    if (!res.ok) {
+      return offlineCoach(message, context);
+    }
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
     };
     return data.choices?.[0]?.message?.content || "No response.";
   } catch {
-    return "Coach is briefly unavailable. Try again in a moment.";
+    return offlineCoach(message, context);
   }
 }
 
@@ -137,6 +140,15 @@ function normalizeMcq(q: Partial<Mcq>): Mcq {
     correct: (["A", "B", "C", "D"].includes(correct) ? correct : "A") as Mcq["correct"],
     explanation: String(q.explanation || ""),
   };
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function fallbackMcqs(text: string, count: number): Mcq[] {
@@ -215,5 +227,21 @@ function fallbackMcqs(text: string, count: number): Mcq[] {
       explanation: "Questions are grounded in the uploaded training material.",
     },
   ];
-  return base.slice(0, Math.max(3, Math.min(count, base.length)));
+  return shuffle(base).slice(0, Math.max(3, Math.min(count, base.length)));
+}
+
+
+function offlineCoach(message: string, context: string): string {
+  const m = message.toLowerCase();
+  const gaps = context || "Survey Design, Sampling, Python, SQL, Cybersecurity";
+  if (m.includes("sample") || m.includes("survey") || m.includes("sampling")) {
+    return "For sampling methods: start with SRS vs stratified designs, then practice variance estimation. On iGOT Karmayogi search 'sample survey' foundation modules, then NSSTA TPAC survey operations. Your open gaps: " + gaps;
+  }
+  if (m.includes("python") || m.includes("sql") || m.includes("data")) {
+    return "Strengthen technical skills with short daily drills: SQL joins on statistical tables, then Python pandas for microdata cleaning. Pair this with your Technical domain gaps: " + gaps;
+  }
+  if (m.includes("hello") || m.includes("hi ") || m === "hi" || m === "hello") {
+    return "Namaste. I am PrashikshanSetu coach. Ask about a skill gap (e.g. sampling, SDG indicators, Python) and I will suggest an iGOT / NSSTA style path. Current gap context: " + gaps;
+  }
+  return "Focus first on high-severity gaps, take one recommended iGOT/NSSTA module, then generate a practice quiz from your notes. Gap context: " + gaps + ". Try asking about sampling, data quality, or Python next.";
 }

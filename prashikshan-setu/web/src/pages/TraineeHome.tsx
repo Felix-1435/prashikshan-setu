@@ -28,7 +28,7 @@ export default function TraineeHome({ user }: { user: User }) {
     <div className="space-y-8">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-saffron">Trainee workspace</p>
-        <h1 className="font-display text-3xl mt-1">Welcome, {user.name.split(" ")[0]}</h1>
+        <h1 className="font-display text-3xl heading mt-1">Welcome, {user.name.split(" ")[0]}</h1>
         <p className="text-ink-mute text-sm mt-1">
           {user.designation} · {user.department}
         </p>
@@ -62,7 +62,7 @@ export default function TraineeHome({ user }: { user: User }) {
       </div>
 
       <div>
-        <h2 className="font-display text-xl mb-3">Domain averages</h2>
+        <h2 className="font-display text-xl heading mb-3">Domain averages</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           {data.domains.map((d) => (
             <div key={d.domain} className="card p-4">
