@@ -113,8 +113,11 @@ async function seed() {
   const users = [
     ["trainee01", "Train@123", "Anita Sharma", "trainee", "Statistical Investigator", "NSO Field Ops", "anita@mospi.demo"],
     ["trainee02", "Train@123", "Rahul Mehta", "trainee", "Junior Statistical Officer", "Price Statistics", "rahul@mospi.demo"],
+    ["trainee03", "Train@123", "Sneha Iyer", "trainee", "Field Enumerator Lead", "Survey Ops", "sneha@mospi.demo"],
+    ["trainee04", "Train@123", "Vikram Singh", "trainee", "Data Processing Assistant", "Computer Centre", "vikram@mospi.demo"],
     ["coord01", "Coord@123", "Dr. Priya Nair", "coordinator", "Training Coordinator", "DIID / NSSTA", "priya@mospi.demo"],
-    ["admin", "Admin@123", "System Admin", "admin", "Admin", "DIID", "admin@mospi.demo"],
+    ["coord02", "Coord@123", "Amit Desai", "coordinator", "Regional Training Officer", "NSSTA West", "amit@mospi.demo"],
+    ["admin", "Admin@123", "System Admin", "admin", "Platform Admin", "DIID", "admin@mospi.demo"],
   ];
   for (const u of users) {
     await pool.query(

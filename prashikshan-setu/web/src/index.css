@@ -81,16 +81,11 @@ h1, h2, h3, .heading { color: var(--text) !important; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  border-radius: 0.85rem; padding: 0.72rem 1.2rem; font-size: 0.875rem; font-weight: 600;
+  border-radius: 999px; padding: 0.75rem 1.35rem; font-size: 0.875rem; font-weight: 600;
   border: none; cursor: pointer; transition: transform 0.15s ease, filter 0.2s, box-shadow 0.2s;
 }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary {
-  background: linear-gradient(135deg, #0c1b33, #1e4a7a);
-  color: #fff !important;
-  box-shadow: 0 12px 28px rgba(12, 27, 51, 0.3);
-}
 html.dark .btn-primary {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.35);
@@ -107,7 +102,7 @@ html.dark .btn-primary {
 }
 
 .input {
-  width: 100%; border-radius: 0.85rem; border: 1px solid var(--border);
+  width: 100%; border-radius: 1rem; border: 1px solid var(--border);
   background: var(--surface); color: var(--text) !important;
   padding: 0.72rem 0.9rem; font-size: 0.875rem; outline: none;
 }

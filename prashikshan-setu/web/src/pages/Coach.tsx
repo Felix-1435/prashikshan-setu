@@ -60,7 +60,7 @@ export default function Coach({ user }: { user: User }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void send()}
         />
-        <button className="btn-primary" onClick={() => void send()} disabled={busy}>
+        <button className="btn btn-primary" onClick={() => void send()} disabled={busy}>
           <Send className="w-4 h-4" />
         </button>
       </div>

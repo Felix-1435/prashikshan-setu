@@ -96,7 +96,7 @@ export default function GenerateQuiz({ user }: { user: User }) {
             onChange={(e) => setContent(e.target.value)}
           />
         </div>
-        <button className="btn-accent" onClick={() => void run()} disabled={loading}>
+        <button className="btn btn-accent" onClick={() => void run()} disabled={loading}>
           <Sparkles className="w-4 h-4" />
           {loading ? "Generating MCQs…" : "Generate MCQs"}
         </button>

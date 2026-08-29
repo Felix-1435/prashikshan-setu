@@ -72,7 +72,7 @@ export default function TakeQuiz({ user, id }: { user: User; id: number }) {
             {q.explanation && <p className="text-xs muted pt-1">{q.explanation}</p>}
           </motion.div>
         ))}
-        <Link href="/quizzes"><a className="btn-ghost">Back to quiz bank</a></Link>
+        <Link href="/quizzes"><a className="btn btn-ghost">Back to quiz bank</a></Link>
       </div>
     );
   }
@@ -86,8 +86,8 @@ export default function TakeQuiz({ user, id }: { user: User; id: number }) {
           <div className="text-lg opacity-90 mt-1">{result.percentage}%</div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Link href="/quizzes"><a className="btn-ghost">My assessments</a></Link>
-          <button className="btn-primary" onClick={() => { setResult(null); setAnswers({}); setRetake(true); }}>Retake</button>
+          <Link href="/quizzes"><a className="btn btn-ghost">My assessments</a></Link>
+          <button className="btn btn-primary" onClick={() => { setResult(null); setAnswers({}); setRetake(true); }}>Retake</button>
         </div>
         <div className="space-y-3">
           {result.detail.map((d, i) => (
@@ -112,8 +112,8 @@ export default function TakeQuiz({ user, id }: { user: User; id: number }) {
           <p className="text-sm opacity-70 mt-2">{prev.created_at ? new Date(prev.created_at).toLocaleString() : ""}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary" onClick={() => setRetake(true)}>Take again</button>
-          <Link href="/quizzes"><a className="btn-ghost">All assessments</a></Link>
+          <button className="btn btn-primary" onClick={() => setRetake(true)}>Take again</button>
+          <Link href="/quizzes"><a className="btn btn-ghost">All assessments</a></Link>
         </div>
       </div>
     );
@@ -138,7 +138,7 @@ export default function TakeQuiz({ user, id }: { user: User; id: number }) {
           })}
         </motion.div>
       ))}
-      {questions.length > 0 && <button className="btn-primary" onClick={() => void submit()}>Submit assessment</button>}
+      {questions.length > 0 && <button className="btn btn-primary" onClick={() => void submit()}>Submit assessment</button>}
     </div>
   );
 }

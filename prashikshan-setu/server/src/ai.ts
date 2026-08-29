@@ -232,16 +232,83 @@ function fallbackMcqs(text: string, count: number): Mcq[] {
 
 
 function offlineCoach(message: string, context: string): string {
-  const m = message.toLowerCase();
-  const gaps = context || "Survey Design, Sampling, Python, SQL, Cybersecurity";
-  if (m.includes("sample") || m.includes("survey") || m.includes("sampling")) {
-    return "For sampling methods: start with SRS vs stratified designs, then practice variance estimation. On iGOT Karmayogi search 'sample survey' foundation modules, then NSSTA TPAC survey operations. Your open gaps: " + gaps;
+  const m = (message || "").toLowerCase().trim();
+  const gapLines = (context || "")
+    .split(/\n|,|;/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  const gapHint = gapLines.length
+    ? "Your recorded gaps include: " + gapLines.slice(0, 4).join("; ") + "."
+    : "Open your Competency map to prioritise gaps.";
+
+  if (!m || m === "hi" || m === "hello" || m === "hey" || m.startsWith("namaste")) {
+    return (
+      "Namaste. I am the PrashikshanSetu coach for Official Statistics capacity building.\n\n" +
+      "Ask me something specific, for example:\n" +
+      "• How do I improve sampling methods?\n" +
+      "• What iGOT course helps with Python for survey data?\n" +
+      "• Steps to close a data-quality gap\n\n" +
+      gapHint
+    );
   }
-  if (m.includes("python") || m.includes("sql") || m.includes("data")) {
-    return "Strengthen technical skills with short daily drills: SQL joins on statistical tables, then Python pandas for microdata cleaning. Pair this with your Technical domain gaps: " + gaps;
+  if (/(sampl|survey design|stratified|srs)/.test(m)) {
+    return (
+      "Sampling methods — practical path:\n" +
+      "1. Revise SRS vs stratified vs cluster and when each reduces variance.\n" +
+      "2. Work one NSSTA-style exercise: allocate sample across strata with cost constraints.\n" +
+      "3. On iGOT Karmayogi, search foundation modules on sample surveys / survey operations.\n" +
+      "4. After study, ask your coordinator to generate a quiz from your unit notes.\n\n" +
+      gapHint
+    );
   }
-  if (m.includes("hello") || m.includes("hi ") || m === "hi" || m === "hello") {
-    return "Namaste. I am PrashikshanSetu coach. Ask about a skill gap (e.g. sampling, SDG indicators, Python) and I will suggest an iGOT / NSSTA style path. Current gap context: " + gaps;
+  if (/(python|pandas|coding|script)/.test(m)) {
+    return (
+      "Python for statistical work — 2-week micro-plan:\n" +
+      "Days 1–3: pandas read_csv, filters, groupby on a small microdata extract.\n" +
+      "Days 4–6: missing values, merge of household & member files.\n" +
+      "Days 7–10: simple charts (bar/line) for indicator checks.\n" +
+      "Pair with iGOT-style Python for Data Analysis modules, then request a practice quiz.\n\n" +
+      gapHint
+    );
   }
-  return "Focus first on high-severity gaps, take one recommended iGOT/NSSTA module, then generate a practice quiz from your notes. Gap context: " + gaps + ". Try asking about sampling, data quality, or Python next.";
+  if (/(sql|database|query)/.test(m)) {
+    return (
+      "SQL for statistical databases:\n" +
+      "Focus on SELECT, JOIN, GROUP BY, and window functions for weighted indicators.\n" +
+      "Practice reconstructing a district aggregate from unit-level tables.\n" +
+      "Recommended next: SQL intermediate modules on iGOT, then coordinator-led assessment.\n\n" +
+      gapHint
+    );
+  }
+  if (/(sdg|indicator|quality|dqaf|data quality)/.test(m)) {
+    return (
+      "Data quality & indicators:\n" +
+      "Use the classic pillars — relevance, accuracy, timeliness, accessibility, coherence.\n" +
+      "For each open gap, write one control check (e.g. range, consistency across waves).\n" +
+      "Study SDG indicator framework notes, then generate MCQs from those notes in Build quiz.\n\n" +
+      gapHint
+    );
+  }
+  if (/(igot|karmayogi|nssta|course|training)/.test(m)) {
+    return (
+      "Training pathway tip:\n" +
+      "Open Learning path in PrashikshanSetu for ranked recommendations, then open https://igotkarmayogi.gov.in to search the matching topic.\n" +
+      "NSSTA TPAC intensives suit advanced survey operations; iGOT foundation suits domain gaps.\n\n" +
+      gapHint
+    );
+  }
+  if (/(cyber|privacy|dpdp|digital)/.test(m)) {
+    return (
+      "Digital governance focus:\n" +
+      "Complete cybersecurity awareness + DPDP basics, then apply a checklist to any microdata share (purpose, access log, anonymisation).\n" +
+      gapHint
+    );
+  }
+  return (
+    "Here is a concrete next step: pick your highest-severity gap, study one short module on that topic, then take or request a practice quiz from your notes.\n\n" +
+    "You asked about: \"" + message.slice(0, 120) + "\".\n" +
+    gapHint +
+    "\n\nTry a more specific question (sampling, Python, SQL, SDG, iGOT) for a detailed plan."
+  );
 }
