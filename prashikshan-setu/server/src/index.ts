@@ -314,6 +314,42 @@ app.get("/api/admin/overview", async (_req, res) => {
   }
 });
 
+
+app.get("/api/admin/attempts", async (_req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT a.id, a.score, a.total, a.created_at,
+             u.name AS trainee_name, u.username, u.designation,
+             q.title AS quiz_title
+      FROM quiz_attempts a
+      JOIN users u ON u.id = a.user_id
+      JOIN quizzes q ON q.id = a.quiz_id
+      ORDER BY a.created_at DESC
+      LIMIT 100
+    `);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Attempts failed" });
+  }
+});
+
+app.get("/api/me/:id/attempts", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(`
+      SELECT a.id, a.quiz_id, a.score, a.total, a.created_at, q.title AS quiz_title
+      FROM quiz_attempts a
+      JOIN quizzes q ON q.id = a.quiz_id
+      WHERE a.user_id = $1
+      ORDER BY a.created_at DESC
+    `, [id]);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.warn("WARNING: DATABASE_URL not set — set it in .env (Neon/Supabase)");
