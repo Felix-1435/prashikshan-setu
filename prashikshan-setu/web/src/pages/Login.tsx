@@ -1,53 +1,14 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../lib/utils";
 import { saveUser, type User } from "../lib/auth";
-import { ArrowRight, Sparkles, Shield, BookOpen, Bot } from "lucide-react";
-
-function FloatingParticles() {
-  const colors = ["#00CFFF", "#3B82F6", "#E86B12", "#22D3EE", "#A855F7"];
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 26 }, (_, i) => ({
-        id: i,
-        size: 3 + Math.random() * 5,
-        left: Math.random() * 100,
-        top: Math.random() * 100,
-        duration: 5 + Math.random() * 7,
-        delay: Math.random() * 3,
-        drift: 20 + Math.random() * 40,
-        color: colors[i % colors.length],
-      })),
-    [],
-  );
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.span
-          key={p.id}
-          className="absolute rounded-full"
-          style={{
-            width: p.size,
-            height: p.size,
-            left: `${p.left}%`,
-            top: `${p.top}%`,
-            background: p.color,
-            boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
-          }}
-          animate={{ y: [0, -p.drift, 0], opacity: [0.2, 0.9, 0.2] }}
-          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ))}
-    </div>
-  );
-}
+import { ArrowRight, Sparkles, Route, FileUp, Shield } from "lucide-react";
 
 export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [username, setUsername] = useState("trainee01");
   const [password, setPassword] = useState("Train@123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ok, setOk] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,132 +19,157 @@ export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      setOk(true);
       saveUser(u);
-      setTimeout(() => onLogin(u), 700);
+      onLogin(u);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
       setLoading(false);
     }
   };
 
-  const demos = [
-    { u: "trainee01", p: "Train@123", label: "Trainee · Anita" },
-    { u: "trainee03", p: "Train@123", label: "Trainee · Sneha" },
-    { u: "coord01", p: "Coord@123", label: "Coordinator" },
-    { u: "coord02", p: "Coord@123", label: "Coord · Regional" },
-    { u: "admin", p: "Admin@123", label: "Admin" },
-  ];
+  const fill = (u: string, p: string) => {
+    setUsername(u);
+    setPassword(p);
+  };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(ellipse at 20% 20%, rgba(0,207,255,0.12), transparent 50%), radial-gradient(ellipse at 80% 10%, rgba(232,107,18,0.14), transparent 45%), radial-gradient(ellipse at 50% 100%, rgba(59,130,246,0.1), transparent 50%), #070d16",
-      }}
-    >
-      <FloatingParticles />
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMzBoNjBNMzAgMHYzMCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBmaWxsPSJub25lIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2cpIi8+PC9zdmc+')] opacity-40 pointer-events-none" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-md"
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Left brand panel — original layout, polished */}
+      <div
+        className="relative flex-1 p-10 md:p-14 flex flex-col justify-between min-h-[40vh] lg:min-h-screen overflow-hidden"
+        style={{
+          background: "linear-gradient(145deg, #0b1f3a 0%, #123554 45%, #0f3d3a 100%)",
+          color: "#eef3fb",
+        }}
       >
-        <div className="text-center mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold tracking-wide mb-4"
-            style={{ background: "rgba(0,207,255,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,207,255,0.25)" }}
-          >
-            <Sparkles className="w-3.5 h-3.5" /> SIH26101 · MoSPI · Smart Education
-          </motion.div>
-          <h1 className="font-display text-4xl text-white tracking-tight">
+        <div className="absolute w-80 h-80 rounded-full bg-orange-400/20 blur-3xl -top-16 -left-10 pointer-events-none" />
+        <div className="absolute w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl bottom-0 right-0 pointer-events-none" />
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative z-10">
+          <div className="text-xs uppercase tracking-[0.22em] text-white/45 mb-4">
+            SIH 2026 · SIH26101 · MoSPI
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl text-white leading-tight">
             Prashikshan<span style={{ color: "#fb923c" }}>Setu</span>
           </h1>
-          <p className="text-sm mt-2 text-slate-400 max-w-sm mx-auto">
-            AI training bridge for Official Statistics — gaps, iGOT pathways, material → MCQs
+          <p className="mt-4 text-white/70 text-sm md:text-[15px] max-w-md leading-relaxed">
+            AI training bridge for MoSPI — competency gaps, iGOT Karmayogi pathways, and assessments
+            from real training material.
           </p>
-        </div>
+        </motion.div>
 
-        <form
-          onSubmit={submit}
-          className="rounded-[1.35rem] p-7 space-y-4 border border-white/10"
-          style={{
-            background: "rgba(15, 23, 42, 0.72)",
-            backdropFilter: "blur(18px)",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)",
-          }}
+        <motion.ul
+          className="relative z-10 space-y-4 mt-12"
+          initial="hidden"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.1 } } }}
         >
-          <div className="grid grid-cols-3 gap-2 mb-1">
-            {[
-              { icon: Shield, t: "Gaps" },
-              { icon: BookOpen, t: "iGOT path" },
-              { icon: Bot, t: "AI coach" },
-            ].map((x) => (
-              <div key={x.t} className="rounded-2xl py-2.5 text-center text-[11px] text-slate-300 border border-white/10 bg-white/5">
-                <x.icon className="w-4 h-4 mx-auto mb-1 text-cyan-300" />
-                {x.t}
-              </div>
-            ))}
+          {[
+            { icon: Shield, text: "Competency map across Statistical, Technical, Digital & Behavioural domains" },
+            { icon: Route, text: "Personalized iGOT / NSSTA recommendations" },
+            { icon: FileUp, text: "Generate MCQs from uploaded notes in seconds" },
+          ].map((item) => (
+            <motion.li
+              key={item.text}
+              variants={{ hidden: { opacity: 0, x: -14 }, show: { opacity: 1, x: 0 } }}
+              className="flex gap-3 items-start text-sm text-white/90"
+            >
+              <span className="mt-0.5 w-8 h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                <item.icon className="w-4 h-4 text-orange-300" />
+              </span>
+              <span className="pt-1.5">{item.text}</span>
+            </motion.li>
+          ))}
+        </motion.ul>
+
+        <div className="relative z-10 text-xs text-white/35 mt-10">
+          Ministry of Statistics and Programme Implementation · Smart Education
+        </div>
+      </div>
+
+      {/* Right form — light card on soft paper, original structure */}
+      <div
+        className="flex-1 grid place-items-center p-6 md:p-12"
+        style={{
+          background:
+            "radial-gradient(600px 320px at 80% 10%, rgba(232,107,18,0.08), transparent), radial-gradient(500px 280px at 10% 90%, rgba(15,122,77,0.06), transparent), #f4f1eb",
+        }}
+      >
+        <motion.form
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          onSubmit={submit}
+          className="w-full max-w-md rounded-[1.25rem] p-8 space-y-5 bg-white border border-[#e4e0d8] shadow-[0_20px_50px_rgba(12,27,51,0.08)]"
+        >
+          <div>
+            <h2 className="font-display text-2xl text-[#0c1b33]">Sign in</h2>
+            <p className="text-sm text-[#6b7c90] mt-1">Trainee, coordinator, or admin access</p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-400">Username</label>
+            <label className="text-xs font-semibold text-[#6b7c90]">Username</label>
             <input
-              className="w-full rounded-2xl border border-white/15 bg-white/5 text-white px-4 py-3 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition"
+              className="w-full rounded-xl border border-[#e2ddd3] bg-[#faf9f7] text-[#0c1b33] px-3.5 py-2.5 text-sm outline-none focus:border-[#e86b12] focus:ring-2 focus:ring-orange-200/60 transition"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-400">Password</label>
+            <label className="text-xs font-semibold text-[#6b7c90]">Password</label>
             <input
               type="password"
-              className="w-full rounded-2xl border border-white/15 bg-white/5 text-white px-4 py-3 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition"
+              className="w-full rounded-xl border border-[#e2ddd3] bg-[#faf9f7] text-[#0c1b33] px-3.5 py-2.5 text-sm outline-none focus:border-[#e86b12] focus:ring-2 focus:ring-orange-200/60 transition"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <button
             type="submit"
-            disabled={loading || ok}
-            className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-60"
+            disabled={loading}
+            className="w-full rounded-xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-60"
             style={{
-              background: ok
-                ? "linear-gradient(135deg,#0f7a4d,#34d399)"
-                : "linear-gradient(135deg,#0891b2,#2563eb 50%,#7c3aed)",
-              boxShadow: "0 12px 32px rgba(37,99,235,0.35)",
+              background: "linear-gradient(135deg, #0c1b33, #1e4a7a)",
+              boxShadow: "0 10px 24px rgba(12,27,51,0.25)",
             }}
           >
-            {ok ? "Welcome in…" : loading ? "Signing in…" : (
-              <>Continue <ArrowRight className="w-4 h-4" /></>
+            {loading ? "Signing in…" : (
+              <>
+                Continue <ArrowRight className="w-4 h-4" />
+              </>
             )}
           </button>
 
-          <div className="pt-2">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Quick demo accounts</p>
+          <div className="pt-1 border-t border-[#eeeae3]">
+            <p className="text-[10px] uppercase tracking-wider text-[#9aa8b8] mb-2 mt-3">Demo accounts</p>
             <div className="flex flex-wrap gap-2">
-              {demos.map((d) => (
+              {[
+                ["trainee01", "Train@123", "Trainee"],
+                ["coord01", "Coord@123", "Coordinator"],
+                ["admin", "Admin@123", "Admin"],
+              ].map(([u, p, label]) => (
                 <button
-                  key={d.u}
+                  key={u}
                   type="button"
-                  onClick={() => { setUsername(d.u); setPassword(d.p); }}
-                  className="rounded-full px-3 py-1.5 text-[11px] font-medium border border-white/15 text-slate-300 hover:border-cyan-400/40 hover:text-white hover:bg-white/5 transition"
+                  onClick={() => fill(u, p)}
+                  className="rounded-full px-3 py-1.5 text-[11px] font-medium border border-[#e2ddd3] text-[#3d4f66] hover:border-[#e86b12] hover:text-[#e86b12] transition bg-[#faf9f7]"
                 >
-                  {d.label}
+                  {label}
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-[#9aa8b8] mt-3">
+              trainee01 / Train@123 · coord01 / Coord@123 · admin / Admin@123
+            </p>
           </div>
-        </form>
-        <p className="text-center text-[11px] text-slate-500 mt-5">Ministry of Statistics and Programme Implementation</p>
-      </motion.div>
+        </motion.form>
+      </div>
     </div>
   );
 }
