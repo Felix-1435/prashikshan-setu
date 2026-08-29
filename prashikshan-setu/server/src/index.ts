@@ -12,7 +12,11 @@ const FRONTEND = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(
   cors({
-    origin: [FRONTEND, "http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: (origin, cb) => {
+      const allowed = [FRONTEND, FRONTEND.replace(/\/$/, ""), "http://localhost:5173", "http://127.0.0.1:5173"];
+      if (!origin || allowed.includes(origin) || /\.vercel\.app$/.test(origin)) return cb(null, true);
+      return cb(null, true); // SIH demo: allow browser clients
+    },
     credentials: true,
   }),
 );

@@ -50,7 +50,7 @@ export default function LearningPath({ user }: { user: User }) {
               </div>
             </div>
             <a
-              href={r.url || "#"}
+              href="https://igotkarmayogi.gov.in"
               target="_blank"
               rel="noreferrer"
               className="btn-ghost text-xs shrink-0"

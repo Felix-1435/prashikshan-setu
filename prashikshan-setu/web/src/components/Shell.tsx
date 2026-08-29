@@ -11,8 +11,10 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 
 const traineeNav = [
@@ -34,6 +36,25 @@ const adminNav = [
   { href: "/quizzes", label: "Assessments", icon: ClipboardList },
 ];
 
+function useTheme() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("ps_theme");
+    const prefer = saved ? saved === "dark" : false;
+    setDark(prefer);
+    document.documentElement.classList.toggle("dark", prefer);
+  }, []);
+  const toggle = () => {
+    setDark((d) => {
+      const next = !d;
+      document.documentElement.classList.toggle("dark", next);
+      localStorage.setItem("ps_theme", next ? "dark" : "light");
+      return next;
+    });
+  };
+  return { dark, toggle };
+}
+
 export default function Shell({
   user,
   onLogout,
@@ -45,17 +66,18 @@ export default function Shell({
 }) {
   const [loc] = useLocation();
   const [open, setOpen] = useState(false);
+  const { dark, toggle } = useTheme();
   const nav =
     user.role === "trainee" ? traineeNav : user.role === "admin" ? adminNav : coordNav;
 
   return (
     <div className="min-h-screen flex">
-      {/* sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-ink text-white flex flex-col transition-transform md:translate-x-0 md:static",
+          "fixed inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform md:translate-x-0 md:static",
           open ? "translate-x-0" : "-translate-x-full",
         )}
+        style={{ background: "#0B1F3A", color: "#fff" }}
       >
         <div className="h-16 px-5 flex items-center justify-between border-b border-white/10">
           <div>
@@ -86,13 +108,22 @@ export default function Shell({
             );
           })}
         </nav>
-        <div className="p-4 border-t border-white/10">
-          <div className="text-sm font-semibold">{user.name}</div>
-          <div className="text-xs text-white/50 truncate">
-            {user.designation || user.role} · {user.department || "MoSPI"}
+        <div className="p-4 border-t border-white/10 space-y-3">
+          <button
+            onClick={toggle}
+            className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs bg-white/10 hover:bg-white/15"
+          >
+            <span>{dark ? "Dark theme" : "Light theme"}</span>
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <div>
+            <div className="text-sm font-semibold">{user.name}</div>
+            <div className="text-xs text-white/50 truncate">
+              {user.designation || user.role} · {user.department || "MoSPI"}
+            </div>
           </div>
           <button
-            className="mt-3 flex items-center gap-2 text-xs text-white/60 hover:text-white"
+            className="flex items-center gap-2 text-xs text-white/60 hover:text-white"
             onClick={() => {
               clearUser();
               onLogout();
@@ -108,12 +139,24 @@ export default function Shell({
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-line bg-white/70 backdrop-blur flex items-center px-4 gap-3 sticky top-0 z-20">
-          <button className="md:hidden p-2 rounded-lg border border-line" onClick={() => setOpen(true)}>
+        <header
+          className="h-14 border-b flex items-center px-4 gap-3 sticky top-0 z-20 backdrop-blur"
+          style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--card) 80%, transparent)" }}
+        >
+          <button
+            className="md:hidden p-2 rounded-lg border"
+            style={{ borderColor: "var(--line)" }}
+            onClick={() => setOpen(true)}
+          >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="text-sm text-ink-mute">
-            Prashikshan bridge for the Official Statistical System
+          <div className="text-sm" style={{ color: "var(--mute)" }}>
+            AI training bridge · Official Statistical System · iGOT Karmayogi
+          </div>
+          <div className="ml-auto hidden sm:flex items-center gap-2">
+            <span className="pill shimmer-bar text-[10px] px-3 py-1" style={{ background: "color-mix(in srgb, var(--saffron) 15%, transparent)", color: "var(--saffron)" }}>
+              PS SIH26101
+            </span>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto">{children}</main>
