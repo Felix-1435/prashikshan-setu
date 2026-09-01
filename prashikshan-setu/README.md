@@ -1,83 +1,48 @@
-# PrashikshanSetu — multi-format upload + AI cascade
+# PrashikshanSetu — SIH26101 (MoSPI)
 
-## Files to copy into your repo
+AI training bridge: competency gaps → iGOT / NSSTA recommendations → material upload → LLM MCQs → live score → radar update.
 
-```
-server/src/ai.ts                 # dual OpenRouter model + local fallback
-server/src/index.ts              # reject raw binary on API
-web/package.json                 # NEW deps: mammoth, pdfjs-dist, xlsx, jszip, tesseract.js
-web/src/lib/extractText.ts       # NEW — extracts text from many file types
-web/src/pages/GenerateQuiz.tsx   # uses extractText on upload
-docs/AI-FALLBACK-UPDATE.md
-```
+## Phase 1 features (this build)
 
-After replacing files, in the **web** folder run once locally (or let Vercel install on deploy):
+- Expanded iGOT + NSSTA course catalogue (upsert on every API start)
+- Quiz domain tagging (Statistical / Technical / Digital Governance / Behavioural)
+- **Live competency boost** after quiz attempts (scores + gap close)
+- **Competency radar chart** on trainee home (SVG, no extra deps)
+- Skill breakdown bars + priority gaps
+- Richer Learning Path cards (level, hours, provider, reason)
+- Improved Generate Quiz UX (steps, domain select, upload zone)
+
+## Deploy
+
+| Service | Root | Notes |
+|---------|------|--------|
+| **Render** (API) | `server` | Env: `DATABASE_URL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `FRONTEND_URL` |
+| **Vercel** (Web) | `web` | Env: `VITE_API_URL` = Render URL (no trailing slash) |
+| **Neon** | — | Tables auto-created + courses upserted on API boot |
+
+Build commands unchanged:
 
 ```bash
-cd web && npm install
+# server
+npm install && npm run build && npm start
+
+# web
+npm install && npm run build
 ```
 
-Push to GitHub → Vercel rebuilds the frontend; Render rebuilds the API if `server/` changed.
+## Demo accounts
 
----
+| User | Password | Role |
+|------|----------|------|
+| trainee01 | Train@123 | trainee (Felix Shiju) |
+| coord01 | Coord@123 | coordinator |
+| admin | Admin@123 | admin |
 
-## Supported uploads (client-side extraction)
+## Suggested 3-min demo
 
-| Type | Extensions | How text is obtained |
-|------|------------|----------------------|
-| Plain text | `.txt` `.md` `.csv` `.json` | Direct read |
-| Word | `.docx` | mammoth (raw text) |
-| Old Word | `.doc` | Not supported — save as `.docx` or paste |
-| PDF | `.pdf` | pdf.js (first 40 pages) |
-| Excel | `.xlsx` `.xls` | SheetJS → CSV per sheet |
-| PowerPoint | `.pptx` | JSZip + slide/notes XML text |
-| Old PPT | `.ppt` | Not supported — save as `.pptx` |
-| Images | `.png` `.jpg` `.webp` … | tesseract.js OCR (English) |
+1. Login `trainee01` → radar + gaps  
+2. Login `coord01` → upload material → domain Statistical → Generate MCQs  
+3. Login `trainee01` → take quiz → see competency impact  
+4. Home → radar numbers move; Learning path refreshes  
 
-Extracted text appears in the textarea so the coordinator can **review/edit** before **Generate MCQs**.
-
-### Limits / tips
-
-- Scanned PDFs with no text layer → use image OCR or paste manually.
-- Image OCR is slower and less accurate than real text files.
-- Very large decks/PDFs are capped (pages/slides) for browser performance.
-- Legacy `.doc` / `.ppt` binary formats need conversion first.
-
----
-
-## AI models (Render env)
-
-```
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
-OPENROUTER_MODELS=google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-3b-instruct:free
-```
-
-Flow: Model 1 → Model 2 → local knowledge-base responder.
-
-
----
-
-## Demo accounts (this update)
-
-- Primary trainee: **trainee01** / `Train@123` → **Felix Shiju**
-- New trainees: **trainee05**, **trainee06** / `Train@123`
-- Coordinator: **coord01** / `Coord@123` → **Shivangi**
-
-See `docs/ACCOUNTS.md`. File changed: `server/src/db.ts` (syncs live Neon on restart).
-
-
----
-
-## UI polish (Indian vibe + motion)
-
-```
-web/src/pages/Login.tsx
-web/src/components/Shell.tsx
-web/src/index.css
-```
-
-- Tricolor accent bars, saffron/leaf/navy palette
-- Framer Motion on login features & demo chips
-- Animated ambient orbs on brand panel
-- Page fade-up + polished buttons/inputs
+See `docs/` for setup and pitch notes.

@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { pool, ensureTables } from "./db.js";
+import { pool, ensureTables, applyQuizCompetencyBoost } from "./db.js";
 import { generateMcqsFromText, chatTutor } from "./ai.js";
 
 dotenv.config();
@@ -157,11 +157,12 @@ app.get("/api/courses", async (_req, res) => {
 /** Coordinator: paste or upload text → generate quiz */
 app.post("/api/materials/quiz", async (req, res) => {
   try {
-    const { title, content, userId, count } = req.body as {
+    const { title, content, userId, count, domain } = req.body as {
       title?: string;
       content?: string;
       userId?: number;
       count?: number;
+      domain?: string;
     };
     const bodyText = (content || "").trim();
     if (bodyText.length < 40) {
@@ -190,7 +191,7 @@ app.post("/api/materials/quiz", async (req, res) => {
     const { questions, source } = await generateMcqsFromText(bodyText, count || 8);
     const { rows: quizRows } = await pool.query(
       `INSERT INTO quizzes (material_id, title, domain, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
-      [materialId, `Quiz: ${materialTitle}`, "Training", userId || null],
+      [materialId, `Quiz: ${materialTitle}`, (domain || "Statistical").trim() || "Statistical", userId || null],
     );
     const quizId = quizRows[0].id;
     for (let i = 0; i < questions.length; i++) {
@@ -277,17 +278,32 @@ app.post("/api/quizzes/:id/attempt", async (req, res) => {
       };
     });
     const total = questions.length;
+    const percentage = total ? Math.round((score / total) * 100) : 0;
+
     if (userId) {
       await pool.query(
         `INSERT INTO quiz_attempts (quiz_id, user_id, score, total, answers) VALUES ($1,$2,$3,$4,$5)`,
         [quizId, userId, score, total, JSON.stringify(detail)],
       );
     }
+
+    // Live competency re-calibration from quiz performance
+    let competencyImpact: { updatedSkills: string[]; closedGaps: string[] } = {
+      updatedSkills: [],
+      closedGaps: [],
+    };
+    if (userId && total > 0) {
+      const { rows: quizMeta } = await pool.query(`SELECT domain, title FROM quizzes WHERE id = $1`, [quizId]);
+      const domain = quizMeta[0]?.domain || quizMeta[0]?.title || "Statistical";
+      competencyImpact = await applyQuizCompetencyBoost(userId, domain, percentage);
+    }
+
     res.json({
       score,
       total,
-      percentage: total ? Math.round((score / total) * 100) : 0,
+      percentage,
       detail,
+      competencyImpact,
     });
   } catch (e) {
     console.error(e);

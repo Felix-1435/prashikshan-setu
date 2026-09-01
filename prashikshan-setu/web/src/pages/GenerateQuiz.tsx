@@ -2,12 +2,20 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../lib/utils";
 import type { User } from "../lib/auth";
-import { FileUp, Sparkles, Upload } from "lucide-react";
+import { FileUp, Sparkles, Upload, Layers, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { extractTextFromFile, ACCEPT_ATTR } from "../lib/extractText";
 
+const DOMAINS = [
+  "Statistical",
+  "Technical",
+  "Digital Governance",
+  "Behavioural",
+] as const;
+
 export default function GenerateQuiz({ user }: { user: User }) {
   const [title, setTitle] = useState("Sample survey operations — unit notes");
+  const [domain, setDomain] = useState<string>("Statistical");
   const [content, setContent] = useState(
     `Sample surveys are a cornerstone of official statistics. Sampling design choices (SRS, stratified, cluster) affect variance and cost.\n` +
       `Non-sampling errors include non-response, measurement error, and processing error.\n` +
@@ -64,75 +72,116 @@ export default function GenerateQuiz({ user }: { user: User }) {
         "/api/materials/quiz",
         {
           method: "POST",
-          body: JSON.stringify({ title, content: trimmed, userId: user.id, count: 8 }),
+          body: JSON.stringify({
+            title,
+            content: trimmed,
+            userId: user.id,
+            count: 8,
+            domain,
+          }),
         },
       );
       setResult(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Quiz generation failed");
+      setError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--saffron)" }}>
-          Coordinator · Intelligent Assessment Engine
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-saffron">Coordinator tools</p>
+        <h1 className="font-display text-3xl heading mt-1">Build assessment from material</h1>
+        <p className="text-sm text-ink-mute mt-1">
+          Upload iGOT / NSSTA notes, manuals or slides — extract text, review, then generate MCQs tagged to a competency domain.
         </p>
-        <h1 className="font-display text-3xl mt-1">Generate assessment from material</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--mute)" }}>
-          Upload <strong>Word, PDF, Excel, PowerPoint, images</strong>, or plain text. Text is extracted in the
-          browser, then MCQs are generated.
-        </p>
-      </motion.div>
+      </div>
+
+      {/* Steps indicator */}
+      <div className="flex flex-wrap gap-2 text-xs font-semibold">
+        {[
+          { n: 1, label: "Upload / paste" },
+          { n: 2, label: "Tag domain" },
+          { n: 3, label: "Generate MCQs" },
+        ].map((s) => (
+          <span
+            key={s.n}
+            className="pill bg-ink/5 text-ink inline-flex items-center gap-1.5"
+          >
+            <span className="w-5 h-5 rounded-full bg-saffron/20 text-saffron grid place-items-center text-[11px]">
+              {s.n}
+            </span>
+            {s.label}
+          </span>
+        ))}
+      </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="space-y-4 rounded-2xl border p-5"
-        style={{ borderColor: "var(--line)", background: "var(--card)" }}
+        className="card p-5 space-y-4"
       >
-        <label
-          className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 cursor-pointer transition hover:border-[var(--saffron)]"
-          style={{ borderColor: "var(--line)" }}
-        >
-          <Upload className="w-8 h-8 floaty" style={{ color: "var(--saffron)" }} />
-          <span className="text-sm font-semibold">
-            {extracting ? "Extracting text…" : "Upload learning material"}
-          </span>
-          <span className="text-xs text-center px-4" style={{ color: "var(--mute)" }}>
-            {fileName || ".txt · .md · .docx · .pdf · .xlsx · .pptx · images"}
-          </span>
-          <input
-            type="file"
-            accept={ACCEPT_ATTR}
-            className="hidden"
-            disabled={extracting || loading}
-            onChange={(e) => void onFile(e.target.files?.[0] || null)}
-          />
-        </label>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-ink-mute uppercase">Material title</label>
+            <input
+              className="input mt-1"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. MoSPI CAPI field manual"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-mute uppercase flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5" /> Competency domain
+            </label>
+            <select
+              className="input mt-1"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+            >
+              {DOMAINS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div>
-          <label className="text-xs font-semibold" style={{ color: "var(--mute)" }}>
-            Title
+          <label className="text-xs font-semibold text-ink-mute uppercase">Upload file (optional)</label>
+          <label className="mt-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition hover:border-saffron/50"
+            style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--saffron) 4%, transparent)" }}>
+            <Upload className="w-8 h-8 text-saffron" />
+            <span className="text-sm font-medium">
+              {extracting ? "Extracting text…" : fileName || "Drop PDF, DOCX, PPTX, XLSX, images or TXT"}
+            </span>
+            <span className="text-xs text-ink-mute">Client-side extraction · text appears below for review</span>
+            <input
+              type="file"
+              className="hidden"
+              accept={ACCEPT_ATTR}
+              disabled={extracting}
+              onChange={(e) => void onFile(e.target.files?.[0] || null)}
+            />
           </label>
-          <input className="input mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
+
         <div>
-          <label className="text-xs font-semibold" style={{ color: "var(--mute)" }}>
-            Learning material (extracted / editable)
-          </label>
+          <label className="text-xs font-semibold text-ink-mute uppercase">Learning material text</label>
           <textarea
-            className="input mt-1 min-h-[200px] font-mono text-xs"
+            className="input mt-1 min-h-[200px] font-mono text-[13px] leading-relaxed"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Paste or upload — extracted text appears here for review before generating MCQs…"
             disabled={extracting}
           />
+          <p className="text-xs text-ink-mute mt-1">{content.trim().length} characters</p>
         </div>
+
         <button
           className="btn btn-accent"
           onClick={() => void run()}
@@ -141,6 +190,7 @@ export default function GenerateQuiz({ user }: { user: User }) {
           <Sparkles className="w-4 h-4" />
           {loading ? "Generating MCQs…" : extracting ? "Please wait…" : "Generate MCQs"}
         </button>
+
         {warning && (
           <p className="text-sm rounded-lg border border-amber-200 bg-amber-50 p-3" style={{ color: "#92400e" }}>
             {warning}
@@ -165,11 +215,13 @@ export default function GenerateQuiz({ user }: { user: User }) {
             }}
           >
             <div className="flex items-center gap-2 font-semibold" style={{ color: "var(--leaf)" }}>
-              <FileUp className="w-4 h-4" /> Quiz ready · {result.questionCount} questions
+              <CheckCircle2 className="w-4 h-4" /> Quiz ready · {result.questionCount} questions · domain {domain}
             </div>
             <p className="mt-1" style={{ color: "var(--mute)" }}>
               Engine: {result.source}
-              {result.source === "fallback" ? " (OpenRouter failed — generic demo questions, not from your file)" : " (from your material)"}
+              {result.source === "fallback"
+                ? " (OpenRouter failed — generic demo questions, not from your file)"
+                : " (from your material)"}
             </p>
             {result.source === "fallback" && (
               <p className="mt-2 text-sm rounded-lg border border-amber-200 bg-amber-50 p-3" style={{ color: "#92400e" }}>
@@ -179,7 +231,9 @@ export default function GenerateQuiz({ user }: { user: User }) {
               </p>
             )}
             <Link href={`/quizzes/${result.quizId}`}>
-              <a className="btn-primary mt-3 inline-flex">Open assessment</a>
+              <a className="btn btn-primary mt-3 inline-flex">
+                <FileUp className="w-4 h-4" /> Open assessment
+              </a>
             </Link>
           </motion.div>
         )}
