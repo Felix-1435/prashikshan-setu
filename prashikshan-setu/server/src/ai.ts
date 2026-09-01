@@ -1,9 +1,21 @@
 /**
- * OpenRouter client — free models preferred for SIH demo.
- * Fallback returns deterministic MCQs if key missing or API fails.
+ * OpenRouter multi-model cascade + local knowledge-base fallback.
+ * Flow: Model 1 → Model 2 → expanded offlineCoach (acts as local/DB responder).
+ * Free models preferred for SIH demo.
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/** Ordered model list. Override with env OPENROUTER_MODELS=model1,model2 */
+function getModelCascade(): string[] {
+  const fromEnv = (process.env.OPENROUTER_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (fromEnv.length >= 1) return fromEnv;
+  // Primary + secondary (good free options as of 2025/2026)
+  return [
+    process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+  ];
+}
 
 export type Mcq = {
   question: string;
@@ -15,12 +27,44 @@ export type Mcq = {
   explanation: string;
 };
 
+async function callOpenRouter(
+  model: string,
+  key: string,
+  messages: { role: string; content: string }[],
+  temperature = 0.5,
+): Promise<string | null> {
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.FRONTEND_URL || "https://prashikshan-setu.local",
+        "X-Title": "PrashikshanSetu SIH26101",
+      },
+      body: JSON.stringify({ model, messages, temperature }),
+    });
+    if (!res.ok) {
+      console.error(`OpenRouter ${model} error`, res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const content = data.choices?.[0]?.message?.content?.trim();
+    return content || null;
+  } catch (e) {
+    console.error(`OpenRouter ${model} failed`, e);
+    return null;
+  }
+}
+
 export async function generateMcqsFromText(
   text: string,
   count = 8,
 ): Promise<{ questions: Mcq[]; source: "openrouter" | "fallback" }> {
   const key = process.env.OPENROUTER_API_KEY || "";
-  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free";
+  const models = getModelCascade();
   const clipped = text.slice(0, 12000);
 
   if (!key || key.includes("replace")) {
@@ -34,47 +78,29 @@ Return ONLY valid JSON array, no markdown fences. Each item:
 Rules: one correct answer; options plausible; explanations short; language clear for government trainees.
 Vary question angles each run; do not reuse the same stems. Mix conceptual and applied items. Variation: ${Date.now() % 997}.`;
 
-  try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.FRONTEND_URL || "https://prashikshan-setu.local",
-        "X-Title": "PrashikshanSetu SIH26101",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: `Learning material:\n\n${clipped}` },
-        ],
-        temperature: 0.7,
-      }),
-    });
+  const messages = [
+    { role: "system", content: system },
+    { role: "user", content: `Learning material:\n\n${clipped}` },
+  ];
 
-    if (!res.ok) {
-      console.error("OpenRouter error", res.status, await res.text());
-      return { questions: fallbackMcqs(clipped, count), source: "fallback" };
+  for (const model of models.slice(0, 2)) {
+    const raw = await callOpenRouter(model, key, messages, 0.7);
+    if (!raw) continue;
+    try {
+      const jsonStr = raw.replace(/```json\s*/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(jsonStr) as Mcq[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return {
+          questions: parsed.slice(0, count).map(normalizeMcq),
+          source: "openrouter",
+        };
+      }
+    } catch {
+      console.error("MCQ parse failed for model", model);
     }
-
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const raw = data.choices?.[0]?.message?.content || "[]";
-    const jsonStr = raw.replace(/```json\s*/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(jsonStr) as Mcq[];
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return { questions: fallbackMcqs(clipped, count), source: "fallback" };
-    }
-    return {
-      questions: parsed.slice(0, count).map(normalizeMcq),
-      source: "openrouter",
-    };
-  } catch (e) {
-    console.error("generateMcqs failed", e);
-    return { questions: fallbackMcqs(clipped, count), source: "fallback" };
   }
+
+  return { questions: fallbackMcqs(clipped, count), source: "fallback" };
 }
 
 export async function chatTutor(
@@ -82,61 +108,45 @@ export async function chatTutor(
   context: string,
 ): Promise<string> {
   const key = process.env.OPENROUTER_API_KEY || "";
-  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free";
+  const models = getModelCascade();
 
+  // No key → go straight to local knowledge base
   if (!key || key.includes("replace")) {
-    return (
-      "I can help you close competency gaps in Official Statistics. " +
-      "Focus on the skills marked high severity on your map, then take the recommended iGOT modules. " +
-      `(Context: ${context.slice(0, 200) || "no open gaps listed"})`
-    );
-  }
-
-  try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.FRONTEND_URL || "https://prashikshan-setu.local",
-        "X-Title": "PrashikshanSetu SIH26101",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are PrashikshanSetu Coach for MoSPI trainees. Be concise, practical, and focused on Official Statistics competencies and iGOT learning. Do not invent ministry policies.",
-          },
-          {
-            role: "user",
-            content: `Learner context:\n${context}\n\nQuestion:\n${message}`,
-          },
-        ],
-        temperature: 0.5,
-      }),
-    });
-    if (!res.ok) {
-      return offlineCoach(message, context);
-    }
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    return data.choices?.[0]?.message?.content || "No response.";
-  } catch {
     return offlineCoach(message, context);
   }
+
+  const systemPrompt =
+    "You are PrashikshanSetu Coach for MoSPI / NSSTA trainees. Be concise, practical, and focused on Official Statistics competencies, survey methodology, sampling, data quality, SDG indicators, iGOT Karmayogi, and Python/SQL for statistical work. " +
+    "Answer general questions politely (identity, creator, greetings) then gently steer back to learning if appropriate. Do not invent ministry policies or confidential data. Keep answers under ~220 words unless the learner asks for a detailed plan.";
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    {
+      role: "user",
+      content: `Learner context (gaps / profile):\n${context || "none"}\n\nQuestion:\n${message}`,
+    },
+  ];
+
+  // Try up to 2 remote models
+  for (const model of models.slice(0, 2)) {
+    const reply = await callOpenRouter(model, key, messages, 0.5);
+    if (reply && reply.length > 8) {
+      return reply;
+    }
+  }
+
+  // Both remote models failed → local knowledge-base responder
+  return offlineCoach(message, context);
 }
 
 function normalizeMcq(q: Partial<Mcq>): Mcq {
   const correct = String(q.correct || "A").toUpperCase().slice(0, 1);
   return {
     question: String(q.question || "Question"),
-    optionA: String(q.optionA || q.option_a || "Option A"),
-    optionB: String(q.optionB || q.option_b || "Option B"),
-    optionC: String(q.optionC || q.option_c || "Option C"),
-    optionD: String(q.optionD || q.option_d || "Option D"),
+    optionA: String(q.optionA || (q as any).option_a || "Option A"),
+    optionB: String(q.optionB || (q as any).option_b || "Option B"),
+    optionC: String(q.optionC || (q as any).option_c || "Option C"),
+    optionD: String(q.optionD || (q as any).option_d || "Option D"),
     correct: (["A", "B", "C", "D"].includes(correct) ? correct : "A") as Mcq["correct"],
     explanation: String(q.explanation || ""),
   };
@@ -165,27 +175,18 @@ function fallbackMcqs(text: string, count: number): Mcq[] {
     },
     {
       question: `What is a practical first step after a skill-gap is identified?`,
-      optionA: "Ignore until annual review",
-      optionB: "Take a targeted course on iGOT Karmayogi / NSSTA pathway",
-      optionC: "Change designation immediately",
-      optionD: "Disable analytics",
+      optionA: "Ignore it until next year",
+      optionB: "Study a short focused module and take a practice quiz",
+      optionC: "Delete all competency records",
+      optionD: "Change only the username",
       correct: "B",
-      explanation: "Personalized pathways on iGOT/NSSTA close gaps efficiently.",
+      explanation: "Targeted study + assessment closes gaps faster than passive waiting.",
     },
     {
-      question: `Data quality frameworks in official statistics primarily help to:`,
-      optionA: "Increase survey non-response deliberately",
-      optionB: "Ensure reliability, relevance and accuracy of published indicators",
-      optionC: "Replace field staff",
-      optionD: "Remove metadata",
-      correct: "B",
-      explanation: "Quality frameworks protect credibility of official indicators.",
-    },
-    {
-      question: `Why integrate learning systems with iGOT Karmayogi?`,
-      optionA: "To avoid all assessments",
-      optionB: "To reuse national course catalogues and track completion against competencies",
-      optionC: "To block departmental training",
+      question: `iGOT Karmayogi is primarily used for:`,
+      optionA: "Personal entertainment streaming",
+      optionB: "Government capacity-building courses and learning pathways",
+      optionC: "Stock market day trading",
       optionD: "To store passwords in plain text",
       correct: "B",
       explanation: "iGOT provides shared course inventory and progress signals for government learners.",
@@ -230,7 +231,11 @@ function fallbackMcqs(text: string, count: number): Mcq[] {
   return shuffle(base).slice(0, Math.max(3, Math.min(count, base.length)));
 }
 
-
+/**
+ * Local knowledge-base style responder (used after 2 remote models fail,
+ * or when no API key). Covers general conversation + domain topics.
+ * Think of this as the "database of general conversations + training FAQs".
+ */
 function offlineCoach(message: string, context: string): string {
   const m = (message || "").toLowerCase().trim();
   const gapLines = (context || "")
@@ -242,17 +247,49 @@ function offlineCoach(message: string, context: string): string {
     ? "Your recorded gaps include: " + gapLines.slice(0, 4).join("; ") + "."
     : "Open your Competency map to prioritise gaps.";
 
-  if (!m || m === "hi" || m === "hello" || m === "hey" || m.startsWith("namaste")) {
+  // --- General / identity / conversation ---
+  if (!m || m === "hi" || m === "hello" || m === "hey" || m.startsWith("namaste") || m === "good morning" || m === "good evening") {
     return (
-      "Namaste. I am the PrashikshanSetu coach for Official Statistics capacity building.\n\n" +
+      "Namaste. I am the PrashikshanSetu coach for Official Statistics capacity building (MoSPI / NSSTA style training).\n\n" +
       "Ask me something specific, for example:\n" +
       "• How do I improve sampling methods?\n" +
       "• What iGOT course helps with Python for survey data?\n" +
-      "• Steps to close a data-quality gap\n\n" +
+      "• Explain stratified vs cluster sampling\n" +
+      "• How to close my data quality gaps?\n\n" +
       gapHint
     );
   }
-  if (/(sampl|survey design|stratified|srs)/.test(m)) {
+
+  if (/(who made you|who created you|who built you|who are you|what are you|your creator|made by|developed by)/.test(m)) {
+    return (
+      "I am PrashikshanSetu Coach — an AI assistant built for the PrashikshanSetu platform (SIH problem statement focused on MoSPI / NSSTA capacity building).\n\n" +
+      "I help trainees with survey methodology, sampling, data quality, SDG indicators, iGOT pathways, and practical next steps from their competency gaps.\n\n" +
+      "When online models are unavailable I answer from a local knowledge base of training FAQs and general conversation patterns.\n\n" +
+      gapHint
+    );
+  }
+
+  if (/(thank|thanks|thx|ok thanks|got it)/.test(m)) {
+    return "You're welcome. When you're ready, pick one gap, study a short module, then request a practice quiz from your unit notes. I can help refine the study plan anytime.";
+  }
+
+  if (/(how are you|how's it going|are you ok)/.test(m)) {
+    return "I'm functioning well and ready to help with Official Statistics learning. What competency or topic would you like to work on today?";
+  }
+
+  if (/(help|what can you do|capabilities|features)/.test(m)) {
+    return (
+      "I can help with:\n" +
+      "1. Sampling methods, survey design, SDG indicators, data quality frameworks\n" +
+      "2. Practical micro-plans (Python/pandas, SQL for statistical DBs)\n" +
+      "3. Mapping your open gaps to iGOT / NSSTA style next steps\n" +
+      "4. Guiding coordinators on generating quizzes from unit notes\n\n" +
+      "Try a concrete question such as \"How do I improve sampling methods?\""
+    );
+  }
+
+  // --- Domain topics ---
+  if (/(sampl|srs|stratified|cluster|nssta|survey design)/.test(m)) {
     return (
       "Sampling methods — practical path:\n" +
       "1. Revise SRS vs stratified vs cluster and when each reduces variance.\n" +
@@ -301,14 +338,17 @@ function offlineCoach(message: string, context: string): string {
   if (/(cyber|privacy|dpdp|digital)/.test(m)) {
     return (
       "Digital governance focus:\n" +
-      "Complete cybersecurity awareness + DPDP basics, then apply a checklist to any microdata share (purpose, access log, anonymisation).\n" +
+      "Complete cybersecurity awareness + DPDP basics, then apply a checklist to any microdata share (purpose, access log, anonymisation).\n\n" +
       gapHint
     );
   }
+
+  // Default guided response
   return (
     "Here is a concrete next step: pick your highest-severity gap, study one short module on that topic, then take or request a practice quiz from your notes.\n\n" +
     "You asked about: \"" + message.slice(0, 120) + "\".\n" +
     gapHint +
-    "\n\nTry a more specific question (sampling, Python, SQL, SDG, iGOT) for a detailed plan."
+    "\n\nTry a more specific question (sampling, Python, SQL, SDG, iGOT, or \"who made you\") for a detailed answer. " +
+    "If remote AI models are rate-limited, this local knowledge base still answers common training and general questions."
   );
 }
