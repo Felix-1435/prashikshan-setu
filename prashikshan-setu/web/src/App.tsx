@@ -10,6 +10,7 @@ import Quizzes from "./pages/Quizzes";
 import TakeQuiz from "./pages/TakeQuiz";
 import GenerateQuiz from "./pages/GenerateQuiz";
 import AdminHome from "./pages/AdminHome";
+import Courses from "./pages/Courses";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -58,6 +59,7 @@ export default function App() {
         </Route>
         <Route path="/generate" component={() => <GenerateQuiz user={user} />} />
         <Route path="/admin" component={() => <AdminHome user={user} />} />
+        <Route path="/courses" component={() => <Courses user={user} />} />
         <Route>
           <Redirect
             to={user.role === "trainee" ? "/app" : user.role === "admin" ? "/admin" : "/generate"}

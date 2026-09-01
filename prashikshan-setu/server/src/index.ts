@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { pool, ensureTables, applyQuizCompetencyBoost } from "./db.js";
+import { pool, ensureTables, applyQuizCompetencyBoost, upsertCourses } from "./db.js";
 import { generateMcqsFromText, chatTutor } from "./ai.js";
 
 dotenv.config();
@@ -97,7 +97,7 @@ app.get("/api/me/:id/dashboard", async (req, res) => {
   }
 });
 
-/** Personalized path: map open gaps → iGOT / NSSTA courses */
+/** Personalized path: map open gaps → iGOT / NSSTA courses (live from Neon) */
 app.get("/api/me/:id/path", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -106,51 +106,238 @@ app.get("/api/me/:id/path", async (req, res) => {
       [id],
     );
     const domains = [...new Set(gaps.map((g: { domain: string }) => g.domain))];
-    let courses;
-    if (domains.length) {
-      const { rows } = await pool.query(
-        `SELECT * FROM igot_courses WHERE domain = ANY($1) ORDER BY level, title`,
-        [domains],
-      );
-      courses = rows;
+
+    // Prefer stored recommendations if any
+    const { rows: stored } = await pool.query(
+      `SELECT r.reason, r.status, c.*
+       FROM recommendations r
+       JOIN igot_courses c ON c.id = r.course_id
+       WHERE r.user_id = $1 AND r.status = 'suggested'
+       ORDER BY c.domain, c.level, c.title`,
+      [id],
+    );
+
+    let recommendations;
+    if (stored.length > 0) {
+      recommendations = stored.map((row: Record<string, unknown>) => ({
+        id: row.id,
+        code: row.code,
+        title: row.title,
+        domain: row.domain,
+        level: row.level,
+        hours: row.hours,
+        provider: row.provider,
+        url: row.url,
+        description: row.description || "",
+        reason: row.reason,
+        status: row.status,
+      }));
     } else {
-      const { rows } = await pool.query(`SELECT * FROM igot_courses ORDER BY id LIMIT 6`);
-      courses = rows;
+      let courses;
+      if (domains.length) {
+        const { rows } = await pool.query(
+          `SELECT * FROM igot_courses WHERE domain = ANY($1) ORDER BY level, title`,
+          [domains],
+        );
+        courses = rows;
+      } else {
+        const { rows } = await pool.query(`SELECT * FROM igot_courses ORDER BY id LIMIT 8`);
+        courses = rows;
+      }
+      recommendations = courses.map((c: {
+        id: number;
+        code: string;
+        title: string;
+        domain: string;
+        level: string;
+        hours: number;
+        provider: string;
+        url: string;
+        description?: string;
+      }) => {
+        const related = gaps.filter((g: { domain: string }) => g.domain === c.domain);
+        return {
+          ...c,
+          description: c.description || "",
+          reason:
+            related.length > 0
+              ? `Addresses gap(s): ${related.map((g: { skill: string }) => g.skill).join(", ")}`
+              : "Foundational module aligned to your role profile",
+        };
+      });
     }
 
-    const recommendations = courses.map((c: {
-      id: number;
-      code: string;
-      title: string;
-      domain: string;
-      level: string;
-      hours: number;
-      provider: string;
-      url: string;
-    }) => {
-      const related = gaps.filter((g: { domain: string }) => g.domain === c.domain);
-      return {
-        ...c,
-        reason:
-          related.length > 0
-            ? `Addresses gap(s): ${related.map((g: { skill: string }) => g.skill).join(", ")}`
-            : "Foundational module aligned to your role profile",
-      };
-    });
-
-    res.json({ recommendations, source: "igot-mock+nssta" });
+    res.json({ recommendations, source: "neon-igot-nssta", gapDomains: domains });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Path failed" });
   }
 });
 
-app.get("/api/courses", async (_req, res) => {
+app.get("/api/courses", async (req, res) => {
   try {
-    const { rows } = await pool.query(`SELECT * FROM igot_courses ORDER BY domain, title`);
+    const domain = typeof req.query.domain === "string" ? req.query.domain : "";
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const params: unknown[] = [];
+    const where: string[] = [];
+    if (domain) {
+      params.push(domain);
+      where.push(`domain = $${params.length}`);
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      where.push(`(title ILIKE $${params.length} OR code ILIKE $${params.length} OR provider ILIKE $${params.length})`);
+    }
+    const sql = `SELECT * FROM igot_courses ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY domain, level, title`;
+    const { rows } = await pool.query(sql, params);
     res.json(rows);
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Courses failed" });
+  }
+});
+
+/** Re-sync curated iGOT / NSSTA catalogue into Neon (SIH-safe: no brittle public scrape). */
+app.post("/api/courses/sync", async (_req, res) => {
+  try {
+    await upsertCourses();
+    const { rows } = await pool.query(`SELECT COUNT(*)::int AS c FROM igot_courses`);
+    const { rows: byDomain } = await pool.query(
+      `SELECT domain, COUNT(*)::int AS c FROM igot_courses GROUP BY domain ORDER BY domain`,
+    );
+    res.json({
+      ok: true,
+      total: rows[0].c,
+      byDomain,
+      message: "Catalogue synced (iGOT Karmayogi + NSSTA TPAC metadata).",
+      source: "curated-igot-nssta",
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sync failed" });
+  }
+});
+
+app.post("/api/courses", async (req, res) => {
+  try {
+    const { code, title, domain, level, hours, provider, url, description } = req.body as {
+      code?: string;
+      title?: string;
+      domain?: string;
+      level?: string;
+      hours?: number;
+      provider?: string;
+      url?: string;
+      description?: string;
+    };
+    if (!code?.trim() || !title?.trim() || !domain?.trim()) {
+      res.status(400).json({ error: "code, title and domain are required" });
+      return;
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO igot_courses (code, title, domain, level, hours, provider, url, description)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (code) DO UPDATE SET
+         title = EXCLUDED.title,
+         domain = EXCLUDED.domain,
+         level = EXCLUDED.level,
+         hours = EXCLUDED.hours,
+         provider = EXCLUDED.provider,
+         url = EXCLUDED.url,
+         description = EXCLUDED.description
+       RETURNING *`,
+      [
+        code.trim(),
+        title.trim(),
+        domain.trim(),
+        level || "foundation",
+        hours ?? 4,
+        provider || "iGOT Karmayogi",
+        url || "https://igotkarmayogi.gov.in",
+        description || "",
+      ],
+    );
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Create course failed" });
+  }
+});
+
+app.put("/api/courses/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, domain, level, hours, provider, url, description } = req.body as Record<string, unknown>;
+    const { rows } = await pool.query(
+      `UPDATE igot_courses SET
+         title = COALESCE($2, title),
+         domain = COALESCE($3, domain),
+         level = COALESCE($4, level),
+         hours = COALESCE($5, hours),
+         provider = COALESCE($6, provider),
+         url = COALESCE($7, url),
+         description = COALESCE($8, description)
+       WHERE id = $1 RETURNING *`,
+      [id, title, domain, level, hours, provider, url, description],
+    );
+    if (!rows[0]) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+app.delete("/api/courses/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await pool.query(`DELETE FROM igot_courses WHERE id = $1`, [id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+
+/** Persist gap→course recommendations for a trainee (links Learning Path to DB rows). */
+app.post("/api/me/:id/recommendations/refresh", async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const { rows: gaps } = await pool.query(
+      `SELECT domain, skill FROM gaps WHERE user_id = $1 AND status = 'open'`,
+      [userId],
+    );
+    const domains = [...new Set(gaps.map((g: { domain: string }) => g.domain))];
+    let courses: { id: number; domain: string }[] = [];
+    if (domains.length) {
+      const { rows } = await pool.query(
+        `SELECT id, domain FROM igot_courses WHERE domain = ANY($1)`,
+        [domains],
+      );
+      courses = rows;
+    } else {
+      const { rows } = await pool.query(`SELECT id, domain FROM igot_courses ORDER BY id LIMIT 8`);
+      courses = rows;
+    }
+    await pool.query(`DELETE FROM recommendations WHERE user_id = $1`, [userId]);
+    let inserted = 0;
+    for (const c of courses) {
+      const related = gaps.filter((g: { domain: string }) => g.domain === c.domain);
+      const reason =
+        related.length > 0
+          ? `Addresses gap(s): ${related.map((g: { skill: string }) => g.skill).join(", ")}`
+          : "Foundational module aligned to your role profile";
+      await pool.query(
+        `INSERT INTO recommendations (user_id, course_id, reason, status) VALUES ($1,$2,$3,'suggested')`,
+        [userId, c.id, reason],
+      );
+      inserted += 1;
+    }
+    res.json({ ok: true, inserted });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Refresh recommendations failed" });
   }
 });
 

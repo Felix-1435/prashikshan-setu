@@ -179,7 +179,7 @@ const COURSE_CATALOGUE: [string, string, string, string, number, string, string]
   ["IGOT-BEH-210", "Leadership in Statistical Organisations", "Behavioural", "intermediate", 8, "iGOT Karmayogi", "Leading teams across FOD, NAD and state DES."],
 ];
 
-async function upsertCourses() {
+export async function upsertCourses() {
   for (const c of COURSE_CATALOGUE) {
     const [code, title, domain, level, hours, provider, description] = c;
     await pool.query(

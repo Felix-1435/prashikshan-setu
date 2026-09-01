@@ -2,7 +2,10 @@
 
 AI training bridge: competency gaps → iGOT / NSSTA recommendations → material upload → LLM MCQs → live score → radar update.
 
-## Phase 1 features (this build)
+## Phase 1 + Phase 2 (this build)
+
+### Phase 1
+
 
 - Expanded iGOT + NSSTA course catalogue (upsert on every API start)
 - Quiz domain tagging (Statistical / Technical / Digital Governance / Behavioural)
@@ -11,6 +14,15 @@ AI training bridge: competency gaps → iGOT / NSSTA recommendations → materia
 - Skill breakdown bars + priority gaps
 - Richer Learning Path cards (level, hours, provider, reason)
 - Improved Generate Quiz UX (steps, domain select, upload zone)
+
+### Phase 2 — iGOT integration
+- `GET /api/courses` with domain + search filters
+- `POST /api/courses/sync` — re-upsert curated iGOT + NSSTA catalogue into Neon
+- `POST /api/courses` — coordinator/admin add or upsert a course
+- `PUT/DELETE /api/courses/:id`
+- `POST /api/me/:id/recommendations/refresh` — write gap→course rows into `recommendations`
+- Learning Path prefers stored recommendations; falls back to live gap→course map
+- **Courses** page in coordinator & admin nav (browse, search, sync, add, delete)
 
 ## Deploy
 

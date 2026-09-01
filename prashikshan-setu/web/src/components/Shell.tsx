@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileUp, BarChart3, LogOut, Menu, X, Sun, Moon,
-  Home, Route, MessageCircle, ClipboardList, Shield,
+  Home, Route, MessageCircle, ClipboardList, Shield, BookOpen,
 } from "lucide-react";
 import { clearUser, type User } from "../lib/auth";
 import { cn } from "../lib/utils";
@@ -17,12 +17,14 @@ const traineeNav = [
 
 const coordNav = [
   { href: "/generate", label: "Build quiz", icon: FileUp },
+  { href: "/courses", label: "Courses", icon: BookOpen },
   { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
   { href: "/coach", label: "AI coach", icon: MessageCircle },
 ];
 
 const adminNav = [
   { href: "/admin", label: "Overview", icon: BarChart3 },
+  { href: "/courses", label: "Courses", icon: BookOpen },
   { href: "/quizzes", label: "Quizzes", icon: ClipboardList },
   { href: "/generate", label: "Build quiz", icon: FileUp },
 ];
