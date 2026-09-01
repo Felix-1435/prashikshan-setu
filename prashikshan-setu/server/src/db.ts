@@ -106,16 +106,97 @@ export async function ensureTables() {
   `);
 
   const { rows } = await pool.query(`SELECT COUNT(*)::int AS c FROM users`);
-  if (rows[0].c === 0) await seed();
+  if (rows[0].c === 0) {
+    await seed();
+  } else {
+    // Live DB already has rows — still sync demo account names / add missing trainees
+    await syncDemoProfiles();
+  }
+}
+
+/** Update primary demo names and insert any missing trainee accounts (safe on Neon). */
+async function syncDemoProfiles() {
+  const desired: [string, string, string, string, string, string, string][] = [
+    ["trainee01", "Train@123", "Felix Shiju", "trainee", "Statistical Investigator", "NSO Field Ops", "felix@mospi.demo"],
+    ["trainee02", "Train@123", "Rahul Mehta", "trainee", "Junior Statistical Officer", "Price Statistics", "rahul@mospi.demo"],
+    ["trainee03", "Train@123", "Sneha Iyer", "trainee", "Field Enumerator Lead", "Survey Ops", "sneha@mospi.demo"],
+    ["trainee04", "Train@123", "Vikram Singh", "trainee", "Data Processing Assistant", "Computer Centre", "vikram@mospi.demo"],
+    ["trainee05", "Train@123", "Ananya Krishnan", "trainee", "Statistical Assistant", "Social Statistics", "ananya@mospi.demo"],
+    ["trainee06", "Train@123", "Arjun Nair", "trainee", "Junior Statistical Officer", "Industrial Statistics", "arjun@mospi.demo"],
+    ["coord01", "Coord@123", "Shivangi", "coordinator", "Training Coordinator", "DIID / NSSTA", "shivangi@mospi.demo"],
+    ["coord02", "Coord@123", "Amit Desai", "coordinator", "Regional Training Officer", "NSSTA West", "amit@mospi.demo"],
+    ["admin", "Admin@123", "System Admin", "admin", "Platform Admin", "DIID", "admin@mospi.demo"],
+  ];
+
+  for (const u of desired) {
+    const [username, password, name, role, designation, department, email] = u;
+    const { rows } = await pool.query(`SELECT id FROM users WHERE username = $1`, [username]);
+    if (rows[0]) {
+      await pool.query(
+        `UPDATE users SET name = $2, role = $3, designation = $4, department = $5, email = $6, password = $7 WHERE username = $1`,
+        [username, name, role, designation, department, email, password],
+      );
+    } else {
+      const ins = await pool.query(
+        `INSERT INTO users (username, password, name, role, designation, department, email)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [username, password, name, role, designation, department, email],
+      );
+      // Seed competency scores + gaps for newly added trainees
+      if (role === "trainee") {
+        await seedCompetenciesForUser(ins.rows[0].id);
+      }
+    }
+  }
+  console.log("[prashikshan-setu] Demo profiles synced (Felix Shiju, Shivangi, extra trainees)");
+}
+
+async function seedCompetenciesForUser(userId: number) {
+  const skills: [string, string, number, number][] = [
+    ["Statistical", "Survey Design", 55, 80],
+    ["Statistical", "Sampling Methods", 48, 80],
+    ["Statistical", "SDG Indicators", 62, 80],
+    ["Statistical", "Data Quality Frameworks", 40, 80],
+    ["Technical", "Python", 35, 75],
+    ["Technical", "SQL", 58, 80],
+    ["Technical", "Data Visualization", 50, 75],
+    ["Technical", "AI / ML Basics", 28, 70],
+    ["Digital Governance", "Cybersecurity Awareness", 60, 80],
+    ["Digital Governance", "Data Privacy", 52, 80],
+    ["Behavioural", "Project Management", 65, 80],
+    ["Behavioural", "Communication", 70, 80],
+  ];
+  for (const [domain, skill, score, target] of skills) {
+    const s = Number(score) + (userId % 3) * 5 - 5;
+    await pool.query(
+      `INSERT INTO competency_scores (user_id, domain, skill, score, target) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (user_id, domain, skill) DO NOTHING`,
+      [userId, domain, skill, Math.max(20, Math.min(90, s)), target],
+    );
+    if (s < Number(target) - 15) {
+      await pool.query(
+        `INSERT INTO gaps (user_id, domain, skill, severity, note) VALUES ($1,$2,$3,$4,$5)`,
+        [
+          userId,
+          domain,
+          skill,
+          s < 40 ? "high" : "medium",
+          `Below target for ${skill}. Recommended structured learning.`,
+        ],
+      );
+    }
+  }
 }
 
 async function seed() {
   const users = [
-    ["trainee01", "Train@123", "Anita Sharma", "trainee", "Statistical Investigator", "NSO Field Ops", "anita@mospi.demo"],
+    ["trainee01", "Train@123", "Felix Shiju", "trainee", "Statistical Investigator", "NSO Field Ops", "felix@mospi.demo"],
     ["trainee02", "Train@123", "Rahul Mehta", "trainee", "Junior Statistical Officer", "Price Statistics", "rahul@mospi.demo"],
     ["trainee03", "Train@123", "Sneha Iyer", "trainee", "Field Enumerator Lead", "Survey Ops", "sneha@mospi.demo"],
     ["trainee04", "Train@123", "Vikram Singh", "trainee", "Data Processing Assistant", "Computer Centre", "vikram@mospi.demo"],
-    ["coord01", "Coord@123", "Dr. Priya Nair", "coordinator", "Training Coordinator", "DIID / NSSTA", "priya@mospi.demo"],
+    ["trainee05", "Train@123", "Ananya Krishnan", "trainee", "Statistical Assistant", "Social Statistics", "ananya@mospi.demo"],
+    ["trainee06", "Train@123", "Arjun Nair", "trainee", "Junior Statistical Officer", "Industrial Statistics", "arjun@mospi.demo"],
+    ["coord01", "Coord@123", "Shivangi", "coordinator", "Training Coordinator", "DIID / NSSTA", "shivangi@mospi.demo"],
     ["coord02", "Coord@123", "Amit Desai", "coordinator", "Regional Training Officer", "NSSTA West", "amit@mospi.demo"],
     ["admin", "Admin@123", "System Admin", "admin", "Platform Admin", "DIID", "admin@mospi.demo"],
   ];

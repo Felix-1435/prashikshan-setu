@@ -54,3 +54,14 @@ OPENROUTER_MODELS=google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-3b-instr
 ```
 
 Flow: Model 1 → Model 2 → local knowledge-base responder.
+
+
+---
+
+## Demo accounts (this update)
+
+- Primary trainee: **trainee01** / `Train@123` → **Felix Shiju**
+- New trainees: **trainee05**, **trainee06** / `Train@123`
+- Coordinator: **coord01** / `Coord@123` → **Shivangi**
+
+See `docs/ACCOUNTS.md`. File changed: `server/src/db.ts` (syncs live Neon on restart).
