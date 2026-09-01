@@ -153,17 +153,31 @@ app.post("/api/materials/quiz", async (req, res) => {
       userId?: number;
       count?: number;
     };
-    if (!content || content.trim().length < 40) {
-      res.status(400).json({ error: "Provide learning material text (min ~40 chars)" });
+    const bodyText = (content || "").trim();
+    if (bodyText.length < 40) {
+      res.status(400).json({ error: "Provide learning material text (min ~40 chars). Plain text only — not .docx/.pdf binary." });
+      return;
+    }
+    // Reject Office/ZIP/PDF binary dumped as "text"
+    if (
+      bodyText.startsWith("PK") ||
+      bodyText.startsWith("%PDF") ||
+      bodyText.includes("word/document.xml") ||
+      bodyText.includes("[Content_Types].xml")
+    ) {
+      res.status(400).json({
+        error:
+          "Content looks like a Word/PDF file, not plain text. Open the document, copy the text, and paste it — or upload a .txt/.md file.",
+      });
       return;
     }
     const materialTitle = (title || "Uploaded material").trim();
     const { rows: mat } = await pool.query(
       `INSERT INTO materials (title, content, uploaded_by) VALUES ($1,$2,$3) RETURNING id`,
-      [materialTitle, content, userId || null],
+      [materialTitle, bodyText, userId || null],
     );
     const materialId = mat[0].id;
-    const { questions, source } = await generateMcqsFromText(content, count || 8);
+    const { questions, source } = await generateMcqsFromText(bodyText, count || 8);
     const { rows: quizRows } = await pool.query(
       `INSERT INTO quizzes (material_id, title, domain, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
       [materialId, `Quiz: ${materialTitle}`, "Training", userId || null],

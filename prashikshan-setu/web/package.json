@@ -11,11 +11,16 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "framer-motion": "^11.5.4",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.441.0",
+    "mammoth": "^1.8.0",
+    "pdfjs-dist": "^4.7.76",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.2",
-    "wouter": "^3.3.5"
+    "tesseract.js": "^5.1.1",
+    "wouter": "^3.3.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",
