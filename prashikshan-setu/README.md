@@ -65,3 +65,19 @@ Flow: Model 1 → Model 2 → local knowledge-base responder.
 - Coordinator: **coord01** / `Coord@123` → **Shivangi**
 
 See `docs/ACCOUNTS.md`. File changed: `server/src/db.ts` (syncs live Neon on restart).
+
+
+---
+
+## UI polish (Indian vibe + motion)
+
+```
+web/src/pages/Login.tsx
+web/src/components/Shell.tsx
+web/src/index.css
+```
+
+- Tricolor accent bars, saffron/leaf/navy palette
+- Framer Motion on login features & demo chips
+- Animated ambient orbs on brand panel
+- Page fade-up + polished buttons/inputs
