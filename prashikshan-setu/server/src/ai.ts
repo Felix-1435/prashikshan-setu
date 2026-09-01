@@ -11,8 +11,10 @@ function getModelCascade(): string[] {
   const fromEnv = (process.env.OPENROUTER_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
   if (fromEnv.length >= 1) return fromEnv;
   // Primary + secondary (good free options as of 2025/2026)
+  // Prefer currently listed free models (IDs change over time on OpenRouter)
   return [
-    process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free",
+    process.env.OPENROUTER_MODEL || "openrouter/free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
   ];
 }
@@ -83,7 +85,7 @@ Vary question angles each run; do not reuse the same stems. Mix conceptual and a
     { role: "user", content: `Learning material:\n\n${clipped}` },
   ];
 
-  for (const model of models.slice(0, 2)) {
+  for (const model of models.slice(0, 3)) {
     const raw = await callOpenRouter(model, key, messages, 0.7);
     if (!raw) continue;
     try {
@@ -128,14 +130,15 @@ export async function chatTutor(
   ];
 
   // Try up to 2 remote models
-  for (const model of models.slice(0, 2)) {
+  for (const model of models.slice(0, 3)) {
     const reply = await callOpenRouter(model, key, messages, 0.5);
     if (reply && reply.length > 8) {
       return reply;
     }
   }
 
-  // Both remote models failed → local knowledge-base responder
+  // Remote models failed → local knowledge-base responder
+  console.warn("[coach] OpenRouter models failed or returned empty; using offlineCoach");
   return offlineCoach(message, context);
 }
 
@@ -327,11 +330,24 @@ function offlineCoach(message: string, context: string): string {
       gapHint
     );
   }
+  if (/(what is igot|what\'s igot|whats igot|igot karmayogi|define igot|explain igot|^igot\??$)/.test(m) ||
+      (m.includes("igot") && /(what|explain|mean|about)/.test(m))) {
+    return (
+      "iGOT Karmayogi (Integrated Government Online Training) is the Government of India’s digital learning platform for civil servants and government employees.\n\n" +
+      "• Official site: https://igotkarmayogi.gov.in\n" +
+      "• Purpose: capacity building, role-based courses, and lifelong learning across ministries\n" +
+      "• For MoSPI / statistical officers: foundation modules on surveys, data quality, SDG indicators, Python/SQL, and digital governance\n" +
+      "• In PrashikshanSetu: use Learning path to get ranked course suggestions mapped to your competency gaps, then open matching modules on iGOT.\n\n" +
+      "NSSTA (National Statistical Systems Training Academy) runs more intensive classroom/TPAC programmes; iGOT is the always-on online layer.\n\n" +
+      gapHint
+    );
+  }
   if (/(igot|karmayogi|nssta|course|training)/.test(m)) {
     return (
       "Training pathway tip:\n" +
       "Open Learning path in PrashikshanSetu for ranked recommendations, then open https://igotkarmayogi.gov.in to search the matching topic.\n" +
       "NSSTA TPAC intensives suit advanced survey operations; iGOT foundation suits domain gaps.\n\n" +
+      "Ask \"what is iGOT\" for a short definition of the platform.\n\n" +
       gapHint
     );
   }

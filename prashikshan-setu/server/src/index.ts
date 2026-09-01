@@ -23,7 +23,17 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "prashikshan-setu", ps: "SIH26101" });
+  const key = process.env.OPENROUTER_API_KEY || "";
+  const models = (process.env.OPENROUTER_MODELS || process.env.OPENROUTER_MODEL || "openrouter/free").slice(0, 120);
+  res.json({
+    ok: true,
+    service: "prashikshan-setu",
+    ps: "SIH26101",
+    openrouter: {
+      keyConfigured: Boolean(key && !key.includes("replace") && key.length > 12),
+      modelsHint: models,
+    },
+  });
 });
 
 app.post("/api/auth/login", async (req, res) => {
