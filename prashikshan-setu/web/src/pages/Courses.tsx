@@ -209,7 +209,7 @@ export default function Courses({ user }: { user: User }) {
       </div>
 
       {loading ? (
-        <p className="text-ink-mute animate-pulse text-sm">Loading catalogue…</p>
+        <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="card h-24 skeleton" />)}</div>
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-ink-mute">{rows.length} courses</p>

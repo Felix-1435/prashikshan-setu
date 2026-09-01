@@ -18,6 +18,10 @@
   --border: #e4e0d8;
   --accent: #e87722;
   --bg: #f7f4ef;
+  --ok: #1b7a4e;
+  --danger: #b91c1c;
+  --shadow: 0 10px 40px -12px rgba(11, 31, 58, 0.12);
+  --radius: 1rem;
 }
 
 html.dark {
@@ -32,19 +36,41 @@ html.dark {
   --border: #1e2f45;
   --accent: #f3a15c;
   --bg: #0a1525;
+  --ok: #3d9b6e;
+  --danger: #f87171;
+  --shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.45);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans", system-ui, sans-serif;
+  min-height: 100dvh;
 }
 
 .font-display {
   font-family: "Fraunces", Georgia, serif;
 }
 
-/* India panel gradient (navy → deep teal with saffron warmth) */
+.heading {
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  color: var(--ink-soft);
+}
+
+.muted {
+  color: var(--mute);
+}
+
+/* India panel gradient */
 .india-panel {
   background:
     radial-gradient(ellipse 80% 60% at 10% 0%, rgba(232, 119, 34, 0.22), transparent 55%),
@@ -63,7 +89,7 @@ body {
 
 @layer components {
   .input {
-    @apply w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none transition;
+    @apply w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition;
     border-color: var(--line);
     color: var(--ink);
     background: var(--card);
@@ -74,7 +100,8 @@ body {
   }
 
   .btn {
-    @apply inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98];
+    min-height: 42px;
   }
   .btn-accent {
     background: linear-gradient(135deg, #e87722 0%, #f09a4a 55%, #d96512 100%);
@@ -92,13 +119,49 @@ body {
   .btn-primary {
     @apply rounded-xl px-4 py-2 text-sm font-semibold text-white;
     background: linear-gradient(135deg, #0b1f3a, #1a3a5c);
+    box-shadow: 0 6px 18px rgba(11, 31, 58, 0.2);
   }
   .btn-primary:hover {
     filter: brightness(1.08);
   }
+  .btn-ghost {
+    @apply rounded-xl px-3 py-2 text-sm font-semibold border transition;
+    border-color: var(--line);
+    color: var(--ink);
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: color-mix(in srgb, var(--saffron) 8%, transparent);
+    border-color: color-mix(in srgb, var(--saffron) 35%, var(--line));
+  }
 
   .pill {
-    @apply text-[11px] font-semibold rounded-full px-2.5 py-1;
+    @apply inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1;
+  }
+
+  .card {
+    @apply rounded-2xl border;
+    border-color: var(--border);
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+
+  .card-lift {
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px -12px rgba(11, 31, 58, 0.16);
+    border-color: color-mix(in srgb, var(--saffron) 28%, var(--border));
+  }
+  html.dark .card-lift:hover {
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  .card-3d {
+    @apply card p-5;
+    background:
+      linear-gradient(145deg, color-mix(in srgb, var(--card) 92%, white), var(--card));
   }
 
   .card-surface {
@@ -108,23 +171,20 @@ body {
   }
 }
 
-.muted {
-  color: var(--mute);
-}
-
-/* Soft page enter */
+/* Page enter */
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-.animate-fade-up {
-  animation: fade-up 0.45s ease-out both;
+.animate-fade-up,
+.rise {
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes floaty {
@@ -133,26 +193,107 @@ body {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-8px);
   }
 }
 .floaty {
-  animation: floaty 3.5s ease-in-out infinite;
+  animation: floaty 4s ease-in-out infinite;
 }
 
-/* Tricolor top accent bar for shell header */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--line) 70%, transparent) 25%,
+    color-mix(in srgb, var(--line) 35%, transparent) 50%,
+    color-mix(in srgb, var(--line) 70%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.empty-state {
+  @apply rounded-2xl border border-dashed p-8 md:p-10 text-center;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+}
+
+/* Progress ring */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+.progress-ring-track {
+  stroke: var(--line);
+}
+.progress-ring-value {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Score hero */
+.score-hero {
+  background: linear-gradient(135deg, #0b1f3a 0%, #1a4a3a 55%, #0d2a28 100%);
+  color: #fff;
+  border: none;
+}
+
+.result-ok {
+  border-color: color-mix(in srgb, var(--ok) 35%, var(--line)) !important;
+  background: color-mix(in srgb, var(--ok) 8%, var(--card));
+}
+.result-bad {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line)) !important;
+  background: color-mix(in srgb, var(--danger) 7%, var(--card));
+}
+
+.option-row {
+  @apply rounded-xl border px-3 py-2.5 cursor-pointer transition text-sm;
+  border-color: var(--line);
+}
+.option-row:hover {
+  border-color: color-mix(in srgb, var(--saffron) 40%, var(--line));
+  background: color-mix(in srgb, var(--saffron) 6%, transparent);
+}
+.option-row.selected {
+  border-color: var(--saffron);
+  background: color-mix(in srgb, var(--saffron) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--saffron) 20%, transparent);
+}
+
 .tricolor-bar {
   height: 3px;
   background: linear-gradient(90deg, #ff9933 0%, #ff9933 33%, #ffffff 33%, #ffffff 66%, #138808 66%, #138808 100%);
 }
 
-/* Sidebar polish */
 .nav-item-active {
   background: linear-gradient(90deg, rgba(232, 119, 34, 0.25), rgba(232, 119, 34, 0.08));
   border-left: 3px solid #e87722;
 }
 
-/* Scrollbar subtle */
+/* Mobile bottom safe area for sticky elements */
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Touch-friendly nav links on mobile */
+@media (max-width: 767px) {
+  .btn {
+    min-height: 44px;
+  }
+  main {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -160,4 +301,27 @@ body {
 ::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--mute) 40%, transparent);
   border-radius: 8px;
+}
+
+/* Text helpers used in pages */
+.text-saffron {
+  color: var(--saffron);
+}
+.text-leaf {
+  color: var(--leaf);
+}
+.text-ink {
+  color: var(--ink);
+}
+.text-ink-mute {
+  color: var(--mute);
+}
+.bg-line {
+  background: var(--line);
+}
+.bg-leaf {
+  background: var(--leaf);
+}
+.bg-ink {
+  background: var(--ink);
 }

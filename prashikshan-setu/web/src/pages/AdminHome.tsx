@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../lib/utils";
 import type { User } from "../lib/auth";
+import { Users, AlertTriangle, Activity } from "lucide-react";
+import { ProgressRing } from "../components/ProgressRing";
+import { CardSkeleton } from "../components/Skeleton";
 
 type Overview = {
   trainees: number;
@@ -30,57 +33,109 @@ export default function AdminHome({ user }: { user: User }) {
     api<Attempt[]>("/api/admin/attempts").then(setAttempts).catch(() => setAttempts([]));
   }, []);
 
+  const orgAvg =
+    data && data.domainAverages.length
+      ? Math.round(
+          data.domainAverages.reduce((a, d) => a + d.average, 0) / data.domainAverages.length,
+        )
+      : 0;
+
   return (
     <div className="space-y-8 rise">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--mute)" }}>
           {user.role === "admin" ? "Administrator" : "Coordinator"} view
         </p>
-        <h1 className="font-display text-3xl mt-1">Workforce capacity snapshot</h1>
+        <h1 className="font-display text-3xl mt-1 heading">Workforce capacity snapshot</h1>
         <p className="text-sm mt-1" style={{ color: "var(--mute)" }}>
           Organization competency signals and assessment scores for DIID / training planning
         </p>
       </div>
 
       {!data ? (
-        <p className="animate-pulse" style={{ color: "var(--mute)" }}>Loading…</p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
       ) : (
         <>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card-3d p-5">
-              <div className="text-xs uppercase font-semibold" style={{ color: "var(--mute)" }}>Trainees</div>
-              <div className="font-display text-4xl mt-1">{data.trainees}</div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-5 card-lift flex items-center gap-4">
+              <ProgressRing value={orgAvg} label="org" />
+              <div>
+                <div className="text-xs uppercase font-semibold text-ink-mute">Org readiness</div>
+                <div className="font-display text-2xl mt-0.5">{orgAvg}%</div>
+              </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="card-3d p-5">
-              <div className="text-xs uppercase font-semibold" style={{ color: "var(--mute)" }}>Open gaps</div>
-              <div className="font-display text-4xl mt-1" style={{ color: "var(--saffron)" }}>{data.openGaps}</div>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="card p-5 card-lift"
+            >
+              <div className="flex items-center gap-2 text-xs uppercase font-semibold text-ink-mute">
+                <Users className="w-4 h-4" /> Trainees
+              </div>
+              <div className="font-display text-4xl mt-2">{data.trainees}</div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="card p-5 card-lift"
+            >
+              <div className="flex items-center gap-2 text-xs uppercase font-semibold text-ink-mute">
+                <AlertTriangle className="w-4 h-4 text-saffron" /> Open gaps
+              </div>
+              <div className="font-display text-4xl mt-2 text-saffron">{data.openGaps}</div>
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {data.gapSeverity.map((g) => (
+                  <span
+                    key={g.severity}
+                    className={`pill ${
+                      g.severity === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {g.severity}: {g.c}
+                  </span>
+                ))}
+              </div>
             </motion.div>
           </div>
 
           <div>
             <h2 className="font-display text-xl mb-3">Domain averages</h2>
             <div className="grid sm:grid-cols-2 gap-3">
-              {data.domainAverages.map((d) => (
-                <div key={d.domain} className="card p-4">
+              {data.domainAverages.map((d, i) => (
+                <motion.div
+                  key={d.domain}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="card p-4 card-lift"
+                >
                   <div className="flex justify-between text-sm mb-2">
                     <span className="font-semibold">{d.domain}</span>
-                    <span>{d.average}%</span>
+                    <span className="text-ink-mute font-semibold">{d.average}%</span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--line)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${d.average}%`, background: "var(--leaf)" }} />
+                  <div className="h-2.5 rounded-full bg-line overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${d.average}%` }}
+                      transition={{ duration: 0.8, delay: 0.1 * i }}
+                      className="h-full rounded-full"
+                      style={{
+                        background:
+                          d.average >= 70
+                            ? "var(--leaf)"
+                            : d.average >= 50
+                              ? "var(--saffron)"
+                              : "#dc2626",
+                      }}
+                    />
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="font-display text-xl mb-3">Gap severity mix</h2>
-            <div className="flex flex-wrap gap-2">
-              {data.gapSeverity.map((s) => (
-                <span key={s.severity} className="pill" style={{ background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}>
-                  {s.severity}: {s.c}
-                </span>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -88,39 +143,38 @@ export default function AdminHome({ user }: { user: User }) {
       )}
 
       <div>
-        <h2 className="font-display text-xl mb-1">Trainee assessment scores</h2>
-        <p className="text-xs mb-3" style={{ color: "var(--mute)" }}>
-          Submitted quizzes from officers — visible to coordinators and admin
-        </p>
+        <h2 className="font-display text-xl mb-3 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-saffron" /> Recent assessment activity
+        </h2>
         <div className="space-y-2">
-          {attempts.map((a, i) => (
+          {attempts.slice(0, 12).map((a, i) => (
             <motion.div
               key={a.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="card-3d p-4 flex flex-wrap items-center justify-between gap-2"
+              className="card p-4 flex flex-wrap items-center justify-between gap-2"
             >
               <div>
                 <div className="font-semibold text-sm">{a.trainee_name}</div>
-                <div className="text-xs" style={{ color: "var(--mute)" }}>
-                  {a.username} · {a.designation || "Trainee"} · {a.quiz_title}
+                <div className="text-xs text-ink-mute">
+                  {a.quiz_title} · {a.designation || a.username}
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-display text-xl">
+                <span className="font-display text-lg">
                   {a.score}/{a.total}
-                </div>
-                <div className="text-[11px]" style={{ color: "var(--mute)" }}>
+                </span>
+                <div className="text-[11px] text-ink-mute">
                   {a.created_at ? new Date(a.created_at).toLocaleString() : ""}
                 </div>
               </div>
             </motion.div>
           ))}
           {attempts.length === 0 && (
-            <p className="text-sm" style={{ color: "var(--mute)" }}>
-              No submissions yet. After a trainee completes a quiz, scores appear here.
-            </p>
+            <div className="empty-state">
+              <p className="text-sm text-ink-mute">No attempts yet — trainees will appear here after submitting quizzes.</p>
+            </div>
           )}
         </div>
       </div>

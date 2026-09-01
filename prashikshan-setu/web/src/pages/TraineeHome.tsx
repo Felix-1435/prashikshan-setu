@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { api } from "../lib/utils";
 import type { User } from "../lib/auth";
 import { AlertTriangle, Target, TrendingUp, Sparkles } from "lucide-react";
+import { ProgressRing } from "../components/ProgressRing";
+import { CardSkeleton } from "../components/Skeleton";
 import { Link } from "wouter";
 
 type Dash = {
@@ -102,12 +104,19 @@ export default function TraineeHome({ user }: { user: User }) {
 
   if (!data) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-64 rounded-lg bg-line" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="skeleton h-3 w-28" />
+          <div className="skeleton h-8 w-56" />
+        </div>
         <div className="grid sm:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card h-28" />
+            <CardSkeleton key={i} />
           ))}
+        </div>
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="card h-72 skeleton" />
+          <div className="card h-72 skeleton" />
         </div>
       </div>
     );
@@ -124,19 +133,12 @@ export default function TraineeHome({ user }: { user: User }) {
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-5 card-lift">
-          <div className="text-xs text-ink-mute font-semibold uppercase">Overall readiness</div>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-display text-4xl text-ink">{data.overall}</span>
-            <span className="text-ink-mute mb-1">/ 100</span>
-          </div>
-          <div className="mt-3 h-2.5 rounded-full bg-line overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${data.overall}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full bg-leaf rounded-full"
-            />
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card p-5 card-lift flex items-center gap-4">
+          <ProgressRing value={data.overall} label="/100" />
+          <div>
+            <div className="text-xs text-ink-mute font-semibold uppercase">Overall readiness</div>
+            <div className="font-display text-2xl text-ink mt-1">{data.overall}%</div>
+            <p className="text-xs text-ink-mute mt-1">Across all competency domains</p>
           </div>
         </motion.div>
         <motion.div

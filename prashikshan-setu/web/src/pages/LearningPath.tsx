@@ -69,9 +69,9 @@ export default function LearningPath({ user }: { user: User }) {
       </div>
 
       {loading && (
-        <div className="space-y-3 animate-pulse">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card h-28" />
+            <div key={i} className="card h-28 skeleton" />
           ))}
         </div>
       )}
@@ -126,9 +126,10 @@ export default function LearningPath({ user }: { user: User }) {
             </motion.div>
           ))}
         {!loading && recs.length === 0 && (
-          <div className="card p-8 text-center">
+          <div className="empty-state">
             <BookOpen className="w-10 h-10 mx-auto text-ink-mute mb-3 opacity-50" />
-            <p className="text-ink-mute text-sm">No recommendations yet. Click Refresh from gaps or take a quiz.</p>
+            <p className="font-semibold text-sm">No recommendations yet</p>
+            <p className="text-ink-mute text-sm mt-1">Click Refresh from gaps or complete a quiz to recalibrate.</p>
           </div>
         )}
       </div>

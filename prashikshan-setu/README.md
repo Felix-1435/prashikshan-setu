@@ -24,6 +24,14 @@ AI training bridge: competency gaps → iGOT / NSSTA recommendations → materia
 - Learning Path prefers stored recommendations; falls back to live gap→course map
 - **Courses** page in coordinator & admin nav (browse, search, sync, add, delete)
 
+### Phase 3 — UI polish
+- Premium cards with lift hover, tricolor accents
+- Progress rings (overall readiness + org snapshot)
+- Shimmer loading skeletons
+- Empty states with CTAs
+- Stronger page enter animations + coach typing dots
+- Mobile-friendly touch targets (44px), safe-area padding, sticky glass header
+
 ## Deploy
 
 | Service | Root | Notes |

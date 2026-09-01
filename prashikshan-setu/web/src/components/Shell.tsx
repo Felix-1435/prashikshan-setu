@@ -92,7 +92,7 @@ export default function Shell({
                 <a
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                    "flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition min-h-[44px]",
                     active
                       ? "nav-item-active text-white font-medium"
                       : "text-white/65 hover:bg-white/10 hover:text-white",
@@ -178,7 +178,7 @@ export default function Shell({
             PS SIH26101
           </span>
         </header>
-        <main className="flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto animate-fade-up">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-6xl w-full mx-auto animate-fade-up safe-pb">{children}</main>
       </div>
     </div>
   );
