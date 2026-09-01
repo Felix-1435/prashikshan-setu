@@ -169,7 +169,15 @@ export default function GenerateQuiz({ user }: { user: User }) {
             </div>
             <p className="mt-1" style={{ color: "var(--mute)" }}>
               Engine: {result.source}
+              {result.source === "fallback" ? " (OpenRouter failed — generic demo questions, not from your file)" : " (from your material)"}
             </p>
+            {result.source === "fallback" && (
+              <p className="mt-2 text-sm rounded-lg border border-amber-200 bg-amber-50 p-3" style={{ color: "#92400e" }}>
+                Questions are from the built-in fallback bank, not your uploaded content.
+                Fix: set a valid OPENROUTER_API_KEY on the API (Render), use working free model ids,
+                redeploy, then generate again. Check /api/health → openrouter.keyConfigured.
+              </p>
+            )}
             <Link href={`/quizzes/${result.quizId}`}>
               <a className="btn-primary mt-3 inline-flex">Open assessment</a>
             </Link>

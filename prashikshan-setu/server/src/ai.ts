@@ -102,6 +102,7 @@ Vary question angles each run; do not reuse the same stems. Mix conceptual and a
     }
   }
 
+  console.warn("[mcq] All OpenRouter models failed or returned invalid JSON; using fallbackMcqs");
   return { questions: fallbackMcqs(clipped, count), source: "fallback" };
 }
 
